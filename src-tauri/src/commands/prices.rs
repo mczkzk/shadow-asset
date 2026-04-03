@@ -7,7 +7,7 @@ use tauri::State;
 
 use crate::commands::accounts::Account;
 use crate::commands::holdings::Holding;
-use crate::pricing::{crypto, forex, gold, yahoo};
+use crate::pricing::{crypto, forex, fund, gold, yahoo};
 use crate::AppState;
 
 const TROY_OZ_GRAMS: f64 = 31.1035;
@@ -211,6 +211,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     // Categorize tickers
     let mut stock_tickers: HashSet<String> = HashSet::new();
     let mut crypto_symbols: HashSet<String> = HashSet::new();
+    let mut fund_tickers: HashSet<String> = HashSet::new();
 
     for h in &all_holdings {
         match h.holding_type.as_str() {
@@ -218,6 +219,9 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
                 crypto_symbols.insert(h.ticker.clone());
             }
             "gold_coin_1oz" | "gold_bar_20g" => {}
+            "fund" | "dc_fund" => {
+                fund_tickers.insert(h.ticker.clone());
+            }
             _ => {
                 stock_tickers.insert(h.ticker.clone());
             }
@@ -227,12 +231,14 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     // Fetch all prices in parallel
     let stock_list: Vec<String> = stock_tickers.into_iter().collect();
     let crypto_list: Vec<String> = crypto_symbols.into_iter().collect();
+    let fund_list: Vec<String> = fund_tickers.into_iter().collect();
 
-    let (usd_jpy, gold_usd_oz, crypto_prices, stock_prices) = tokio::join!(
+    let (usd_jpy, gold_usd_oz, crypto_prices, stock_prices, fund_prices) = tokio::join!(
         forex::fetch_usd_jpy(),
         gold::fetch_gold_usd_oz(),
         crypto::fetch_crypto_prices_jpy(&crypto_list),
         yahoo::fetch_stock_prices(&stock_list),
+        fund::fetch_fund_prices(&fund_list),
     );
 
     // Calculate portfolio
@@ -255,6 +261,10 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
                     (p, "JPY")
                 }
                 "gold_coin_1oz" | "gold_bar_20g" => (None, "JPY"),
+                "fund" | "dc_fund" => {
+                    let p = fund_prices.get(&h.ticker).copied();
+                    (p, "JPY")
+                }
                 _ => {
                     if let Some(sp) = stock_prices.get(&h.ticker.to_uppercase()) {
                         (Some(sp.price), sp.currency.as_str())
