@@ -14,7 +14,7 @@
 
 ## 技術スタック
 - **アプリ**: Tauri v2 (Rust + WebView)
-- **フロント**: React + TypeScript + Tailwind CSS + Recharts
+- **フロント**: React + TypeScript + Tailwind CSS v4 + Recharts
 - **DB**: SQLite via rusqlite (Rust側で管理、Node.js不要)
 - **価格取得**: Rust側のHTTPクライアント(reqwest)で外部API呼び出し
 - **ビルド**: Vite (フロントバンドル)
@@ -83,28 +83,63 @@
 ## 実装計画
 
 ### Phase 1: Tauri + React セットアップ
-- [ ] Tauri v2 プロジェクト作成 (React + TypeScript + Vite)
-- [ ] Tailwind CSS セットアップ
-- [ ] rusqlite 導入、DB初期化コマンド
-- [ ] 基本レイアウト (ヘッダー、ナビゲーション)
+- [x] Tauri v2 プロジェクト作成 (React + TypeScript + Vite)
+- [x] Tailwind CSS v4 セットアップ
+- [x] rusqlite 導入、DB初期化コマンド
+- [x] 基本レイアウト (ヘッダー、ナビゲーション)
 
 ### Phase 2: Rust バックエンド
-- [ ] Tauri コマンド: accounts CRUD
-- [ ] Tauri コマンド: holdings CRUD
-- [ ] Tauri コマンド: 価格取得 (reqwest + Yahoo Finance, gold-api, frankfurter, CoinGecko)
-- [ ] Tauri コマンド: 積立口数推定ロジック
-- [ ] Tauri コマンド: スナップショット保存/読み出し
+- [x] Tauri コマンド: accounts CRUD
+- [x] Tauri コマンド: holdings CRUD
+- [x] Tauri コマンド: 価格取得 (reqwest + Yahoo Finance, gold-api, frankfurter, CoinGecko)
+- [x] Tauri コマンド: 積立口数推定ロジック
+- [x] Tauri コマンド: スナップショット保存/読み出し
 
 ### Phase 3: フロント UI
-- [ ] ダッシュボード (TotalAssets, CategoryBreakdown, AccountList)
-- [ ] 保有管理 (AccountForm, HoldingForm)
-- [ ] 資産推移グラフ (AssetHistory)
-- [ ] Recharts によるチャート描画
+- [x] ダッシュボード (TotalAssets, CategoryBreakdown, AccountList)
+- [x] 保有管理 (AccountForm, HoldingForm)
+- [x] 資産推移グラフ (AssetHistory)
+- [x] Recharts によるチャート描画
 
 ### Phase 4: 仕上げ
 - [ ] アプリアイコン
-- [ ] .dmg ビルド確認
-- [ ] エラーハンドリング
+- [x] .dmg ビルド確認
+- [x] エラーハンドリング
+
+## Implementation Notes
+
+### プロジェクト構造
+```
+src/                          # React フロントエンド
+├── components/dashboard/     # TotalAssets, AccountList, CategoryBreakdownChart, AssetHistory
+├── hooks/                    # usePortfolio (Tauri invoke wrapper)
+├── lib/                      # types, format, api (invoke wrappers)
+├── pages/                    # Dashboard, Accounts
+├── App.tsx                   # react-router-dom でルーティング
+└── main.tsx
+
+src-tauri/src/
+├── lib.rs                    # Tauri setup, AppState (Mutex<Option<Connection>>)
+├── db.rs                     # rusqlite: schema初期化
+├── commands/
+│   ├── accounts.rs           # accounts CRUD
+│   ├── holdings.rs           # holdings CRUD
+│   ├── prices.rs             # 全API並列呼び出し + 計算 + スナップショット保存
+│   └── snapshots.rs          # snapshot CRUD
+└── pricing/
+    ├── yahoo.rs              # Yahoo Finance query2 API (Rust reqwest)
+    ├── gold.rs               # gold-api.com
+    ├── forex.rs              # frankfurter.dev
+    └── crypto.rs             # CoinGecko
+```
+
+### DB保存先
+- `~/Library/Application Support/com.mczkzk.shadow-asset/shadow-asset.db`
+- Tauri の `app_data_dir()` を使用
+
+### ビルド成果物
+- `Shadow Asset.app` (macOS)
+- `Shadow Asset_0.1.0_aarch64.dmg`
 
 ## spike/mvp-v1 からの知見
 - better-sqlite3, @libsql/client, Prisma v7 は全てNode.js v24で問題あり
