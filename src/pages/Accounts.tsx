@@ -14,6 +14,17 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   dc: "確定拠出年金",
 };
 
+// Allowed holding types per account type
+const ALLOWED_HOLDING_TYPES: Record<AccountType, HoldingType[]> = {
+  nisa: ["fund", "us_stock", "us_etf"],
+  ideco: ["fund"],
+  tokutei: ["fund", "us_stock", "us_etf"],
+  us_stock: ["us_stock", "us_etf"],
+  crypto: ["crypto"],
+  gold: ["gold_coin_1oz", "gold_bar_20g"],
+  dc: ["dc_fund"],
+};
+
 const HOLDING_TYPE_LABELS: Record<HoldingType, string> = {
   fund: "投資信託",
   us_stock: "米国株",
@@ -56,7 +67,6 @@ function AccountForm({
     }
   };
 
-  // Group by type
   const grouped = useMemo(() => {
     const map = new Map<AccountType, typeof filteredPresets>();
     for (const p of filteredPresets) {
@@ -96,9 +106,7 @@ function AccountForm({
           </div>
         ))}
         {grouped.size === 0 && (
-          <p className="text-sm text-zinc-400">
-            該当する口座がありません
-          </p>
+          <p className="text-sm text-zinc-400">該当する口座がありません</p>
         )}
       </div>
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
@@ -115,54 +123,39 @@ function HoldingForm({
   accountType: AccountType;
   onCreated: () => void;
 }) {
+  const allowedTypes = ALLOWED_HOLDING_TYPES[accountType];
+
   const [ticker, setTicker] = useState("");
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [holdingType, setHoldingType] = useState<HoldingType>("fund");
+  const [holdingType, setHoldingType] = useState<HoldingType>(allowedTypes[0]);
   const [asOf, setAsOf] = useState("");
   const [monthlyAmount, setMonthlyAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter suggestions based on account type and search query
+  // Inline suggestions based on ticker input
   const suggestions = useMemo(() => {
-    const typeFilter: HoldingType[] = (() => {
-      switch (accountType) {
-        case "nisa":
-        case "tokutei":
-          return ["fund", "us_stock", "us_etf"];
-        case "ideco":
-          return ["fund"];
-        case "us_stock":
-          return ["us_stock", "us_etf"];
-        case "crypto":
-          return ["crypto"];
-        case "gold":
-          return ["gold_coin_1oz", "gold_bar_20g"];
-        case "dc":
-          return ["dc_fund"];
-        default:
-          return [];
-      }
-    })();
-
-    const q = searchQuery.toLowerCase();
+    if (ticker.length === 0) return [];
+    const q = ticker.toLowerCase();
     return HOLDING_PRESETS.filter(
       (p) =>
-        typeFilter.includes(p.holdingType) &&
-        (q === "" ||
-          p.name.toLowerCase().includes(q) ||
-          p.ticker.toLowerCase().includes(q))
-    );
-  }, [accountType, searchQuery]);
+        allowedTypes.includes(p.holdingType) &&
+        (p.ticker.toLowerCase().includes(q) ||
+          p.name.toLowerCase().includes(q))
+    ).slice(0, 8);
+  }, [ticker, allowedTypes]);
 
-  const selectPreset = (preset: (typeof HOLDING_PRESETS)[number]) => {
+  const selectSuggestion = (preset: (typeof HOLDING_PRESETS)[number]) => {
     setTicker(preset.ticker);
     setName(preset.name);
     setHoldingType(preset.holdingType);
     setShowSuggestions(false);
-    setSearchQuery("");
+  };
+
+  const handleTickerChange = (value: string) => {
+    setTicker(value);
+    setShowSuggestions(value.length > 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -186,6 +179,7 @@ function HoldingForm({
       setQuantity("");
       setAsOf("");
       setMonthlyAmount("");
+      setShowSuggestions(false);
       onCreated();
     } catch (e) {
       setError(String(e));
@@ -193,81 +187,68 @@ function HoldingForm({
   };
 
   return (
-    <div className="mt-3 space-y-2 rounded-lg bg-zinc-50 p-3">
-      {/* Suggestion area */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowSuggestions(!showSuggestions)}
-          className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
-        >
-          {showSuggestions ? "▼ 銘柄を選択" : "▶ 銘柄を選択"}
-        </button>
-        {showSuggestions && (
-          <div className="mt-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="銘柄名・ティッカーで検索..."
-              className="mb-2 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-            <div className="max-h-40 overflow-y-auto">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-3 space-y-2 rounded-lg bg-zinc-50 p-3"
+    >
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="relative">
+          <label className="block text-xs text-zinc-500">ティッカー</label>
+          <input
+            type="text"
+            value={ticker}
+            onChange={(e) => handleTickerChange(e.target.value)}
+            onFocus={() => ticker.length > 0 && setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            placeholder={
+              accountType === "crypto"
+                ? "例: BTC"
+                : accountType === "gold"
+                  ? "自動入力"
+                  : "例: NVDA, オルカン"
+            }
+            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-10 mt-1 w-72 rounded-lg border border-zinc-200 bg-white shadow-lg">
               {suggestions.map((p) => (
                 <button
                   key={p.ticker}
                   type="button"
-                  onClick={() => selectPreset(p)}
-                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-indigo-50"
+                  onMouseDown={() => selectSuggestion(p)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-indigo-50"
                 >
-                  <span className="text-zinc-700">{p.name}</span>
-                  <span className="text-xs text-zinc-400">{p.ticker}</span>
+                  <span className="truncate text-zinc-700">{p.name}</span>
+                  <span className="ml-2 shrink-0 text-xs text-zinc-400">
+                    {p.ticker}
+                  </span>
                 </button>
               ))}
-              {suggestions.length === 0 && (
-                <p className="px-2 py-1 text-xs text-zinc-400">
-                  該当なし (下のフォームで手動入力可)
-                </p>
-              )}
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Manual form */}
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div>
-            <label className="block text-xs text-zinc-500">ティッカー</label>
-            <input
-              type="text"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-              placeholder="例: NVDA, BTC"
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-500">銘柄名</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="例: エヌビディア"
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-500">数量</label>
-            <input
-              type="number"
-              step="any"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="例: 10"
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-          </div>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs text-zinc-500">銘柄名</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例: エヌビディア"
+            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-zinc-500">数量</label>
+          <input
+            type="number"
+            step="any"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="例: 10"
+            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+          />
+        </div>
+        {allowedTypes.length > 1 && (
           <div>
             <label className="block text-xs text-zinc-500">種類</label>
             <select
@@ -275,47 +256,63 @@ function HoldingForm({
               onChange={(e) => setHoldingType(e.target.value as HoldingType)}
               className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
             >
-              {Object.entries(HOLDING_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
+              {allowedTypes.map((t) => (
+                <option key={t} value={t}>
+                  {HOLDING_TYPE_LABELS[t]}
                 </option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-zinc-500">
-              確認日 (積立用)
-            </label>
-            <input
-              type="date"
-              value={asOf}
-              onChange={(e) => setAsOf(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-500">
-              月額積立 (円)
-            </label>
-            <input
-              type="number"
-              value={monthlyAmount}
-              onChange={(e) => setMonthlyAmount(e.target.value)}
-              placeholder="例: 50000"
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-          </div>
+        )}
+        <div>
+          <label className="block text-xs text-zinc-500">
+            確認日 (積立用)
+          </label>
+          <input
+            type="date"
+            value={asOf}
+            onChange={(e) => setAsOf(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+          />
         </div>
-        <button
-          type="submit"
-          className="mt-2 rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-        >
-          銘柄を追加
-        </button>
-        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-      </form>
-    </div>
+        <div>
+          <label className="block text-xs text-zinc-500">
+            月額積立 (円)
+          </label>
+          <input
+            type="number"
+            value={monthlyAmount}
+            onChange={(e) => setMonthlyAmount(e.target.value)}
+            placeholder="例: 50000"
+            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+          />
+        </div>
+      </div>
+      <button
+        type="submit"
+        className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+      >
+        銘柄を追加
+      </button>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </form>
   );
+}
+
+function quantityUnit(h: Holding): string {
+  switch (h.holding_type) {
+    case "fund":
+    case "dc_fund":
+      return "口";
+    case "crypto":
+      return h.ticker;
+    case "gold_coin_1oz":
+      return "oz";
+    case "gold_bar_20g":
+      return "本";
+    default:
+      return "株";
+  }
 }
 
 export default function Accounts() {
@@ -390,7 +387,8 @@ export default function Accounts() {
                       {account.name}
                     </p>
                     <p className="text-xs text-zinc-400">
-                      {ACCOUNT_TYPE_LABELS[account.type] ?? account.type} ({accountHoldings.length}銘柄)
+                      {ACCOUNT_TYPE_LABELS[account.type] ?? account.type} (
+                      {accountHoldings.length}銘柄)
                     </p>
                   </div>
                 </button>
@@ -402,7 +400,7 @@ export default function Accounts() {
                 </button>
               </div>
 
-              {/* Holdings summary (always visible) */}
+              {/* Holdings summary (collapsed) */}
               {!isExpanded && accountHoldings.length > 0 && (
                 <div className="border-t border-zinc-50 px-5 py-2">
                   {accountHoldings.map((h) => (
@@ -412,25 +410,15 @@ export default function Accounts() {
                     >
                       <span>{h.name}</span>
                       <span>
-                        {formatNumber(
-                          h.quantity,
-                          h.quantity % 1 === 0 ? 0 : 4
-                        )}{" "}
-                        {h.holding_type === "fund" || h.holding_type === "dc_fund"
-                          ? "口"
-                          : h.holding_type === "crypto"
-                            ? h.ticker
-                            : h.holding_type === "gold_coin_1oz"
-                              ? "oz"
-                              : h.holding_type === "gold_bar_20g"
-                                ? "本"
-                                : "株"}
+                        {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 4)}{" "}
+                        {quantityUnit(h)}
                       </span>
                     </div>
                   ))}
                 </div>
               )}
 
+              {/* Holdings detail (expanded) */}
               {isExpanded && (
                 <div className="border-t border-zinc-100 px-5 py-3">
                   <div className="space-y-1">
@@ -450,16 +438,8 @@ export default function Accounts() {
                             {formatNumber(
                               h.quantity,
                               h.quantity % 1 === 0 ? 0 : 4
-                            )}
-                            {h.holding_type === "fund" || h.holding_type === "dc_fund"
-                              ? "口"
-                              : h.holding_type === "crypto"
-                                ? ` ${h.ticker}`
-                                : h.holding_type === "gold_coin_1oz"
-                                  ? "oz"
-                                  : h.holding_type === "gold_bar_20g"
-                                    ? "本"
-                                    : "株"}
+                            )}{" "}
+                            {quantityUnit(h)}
                           </span>
                           {h.monthly_amount != null && h.monthly_amount > 0 && (
                             <span className="ml-2 text-xs text-indigo-400">
