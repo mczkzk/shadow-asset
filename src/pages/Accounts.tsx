@@ -338,6 +338,7 @@ export default function Accounts() {
   const handleDeleteAccount = async (id: number) => {
     if (!confirm("この口座と全銘柄を削除しますか?")) return;
     await api.deleteAccount(id);
+    setExpandedAccount(null);
     await refresh();
   };
 
