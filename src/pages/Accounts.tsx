@@ -319,6 +319,7 @@ export default function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [expandedAccount, setExpandedAccount] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     const [a, h] = await Promise.all([api.getAccounts(), api.getHoldings()]);
@@ -336,15 +337,23 @@ export default function Accounts() {
   );
 
   const handleDeleteAccount = async (id: number) => {
-    if (!confirm("この口座と全銘柄を削除しますか?")) return;
-    await api.deleteAccount(id);
-    setExpandedAccount(null);
-    await refresh();
+    try {
+      await api.deleteAccount(id);
+      setExpandedAccount(null);
+      setConfirmDeleteId(null);
+      await refresh();
+    } catch (e) {
+      alert(`削除に失敗しました: ${e}`);
+    }
   };
 
   const handleDeleteHolding = async (id: number) => {
-    await api.deleteHolding(id);
-    await refresh();
+    try {
+      await api.deleteHolding(id);
+      await refresh();
+    } catch (e) {
+      alert(`削除に失敗しました: ${e}`);
+    }
   };
 
   return (
@@ -393,12 +402,30 @@ export default function Accounts() {
                     </p>
                   </div>
                 </button>
-                <button
-                  onClick={() => handleDeleteAccount(account.id)}
-                  className="text-xs text-red-400 hover:text-red-600"
-                >
-                  削除
-                </button>
+                {confirmDeleteId === account.id ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500">削除する?</span>
+                    <button
+                      onClick={() => handleDeleteAccount(account.id)}
+                      className="rounded bg-red-500 px-2 py-0.5 text-xs text-white hover:bg-red-600"
+                    >
+                      はい
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-xs text-zinc-400 hover:text-zinc-600"
+                    >
+                      いいえ
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(account.id)}
+                    className="text-xs text-red-400 hover:text-red-600"
+                  >
+                    削除
+                  </button>
+                )}
               </div>
 
               {/* Holdings summary (collapsed) */}
