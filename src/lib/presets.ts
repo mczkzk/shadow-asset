@@ -71,6 +71,7 @@ export const HOLDING_PRESETS: HoldingPreset[] = [
   { ticker: "ETH", name: "イーサリアム", holdingType: "crypto" },
   { ticker: "BCH", name: "ビットコインキャッシュ", holdingType: "crypto" },
   // ゴールド (GoldHoldingForm handles these directly)
-  // DC (楽天証券)
-  { ticker: "9I312179", name: "楽天・全米株式インデックス・ファンド(楽天DC)", holdingType: "dc_fund" },
+  // DC / iDeCo (楽天証券)
+  { ticker: "9I312179", name: "楽天・全米株式インデックス・ファンド", holdingType: "dc_fund" },
+  { ticker: "JP90C000FHC4", name: "楽天・全世界株式インデックス・ファンド", holdingType: "dc_fund" },
 ];
