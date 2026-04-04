@@ -4,6 +4,7 @@ import type { Account, Holding, AccountType, HoldingType } from "@/lib/types";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 import { ACCOUNT_PRESETS, HOLDING_PRESETS } from "@/lib/presets";
 import { formatNumber } from "@/lib/format";
+import type { CsvImportPreview } from "@/lib/api";
 import * as api from "@/lib/api";
 
 // 口座種類ごとに登録可能な保有種類
@@ -581,6 +582,41 @@ export default function Accounts() {
 
   const [exportImportError, setExportImportError] = useState<string | null>(null);
   const [confirmImport, setConfirmImport] = useState<string | null>(null);
+  const [csvPreview, setCsvPreview] = useState<CsvImportPreview | null>(null);
+  const [csvImportLoading, setCsvImportLoading] = useState(false);
+  const [csvApplied, setCsvApplied] = useState(false);
+
+  const handleCsvImport = async (broker: string) => {
+    setExportImportError(null);
+    setCsvPreview(null);
+    setCsvApplied(false);
+    try {
+      const path = await open({
+        filters: [{ name: "CSV", extensions: ["csv"] }],
+        multiple: false,
+      });
+      if (!path || typeof path !== "string") return;
+      setCsvImportLoading(true);
+      const preview = await api.previewCsvImport(path, broker);
+      setCsvPreview(preview);
+    } catch (e) {
+      setExportImportError(`CSV読込失敗: ${e}`);
+    } finally {
+      setCsvImportLoading(false);
+    }
+  };
+
+  const handleCsvApply = async () => {
+    if (!csvPreview) return;
+    setExportImportError(null);
+    try {
+      await api.applyCsvImport(csvPreview.updates);
+      setCsvApplied(true);
+      await refresh();
+    } catch (e) {
+      setExportImportError(`CSV適用失敗: ${e}`);
+    }
+  };
 
   const handleExport = async () => {
     setExportImportError(null);
@@ -649,6 +685,33 @@ export default function Accounts() {
             </svg>
             インポート
           </button>
+          <div className="relative group">
+            <button
+              disabled={csvImportLoading}
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12M12 16.5V3" />
+              </svg>
+              {csvImportLoading ? "読込中..." : "CSV取込"}
+            </button>
+            <div className="invisible absolute right-0 z-20 mt-1 w-72 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg group-hover:visible">
+              <button
+                onClick={() => handleCsvImport("sbi")}
+                className="block w-full px-4 py-2 text-left hover:bg-zinc-50"
+              >
+                <span className="text-sm font-medium text-zinc-700">SBI証券</span>
+                <span className="mt-0.5 block text-xs text-zinc-400">ポートフォリオ → CSVダウンロード</span>
+              </button>
+              <button
+                onClick={() => handleCsvImport("rakuten")}
+                className="block w-full px-4 py-2 text-left hover:bg-zinc-50"
+              >
+                <span className="text-sm font-medium text-zinc-700">楽天証券</span>
+                <span className="mt-0.5 block text-xs text-zinc-400">取引履歴 → 投資信託 → すべて → CSVで保存</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -675,6 +738,54 @@ export default function Accounts() {
 
       {exportImportError && (
         <p className="text-xs text-red-500">{exportImportError}</p>
+      )}
+
+      {csvPreview && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${csvApplied ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50"}`}>
+          <div className="flex items-center justify-between">
+            <span className={`font-medium ${csvApplied ? "text-emerald-800" : "text-blue-800"}`}>
+              {csvApplied
+                ? `適用完了: ${csvPreview.updates.length}件更新`
+                : `CSV読込結果: ${csvPreview.updates.length}件の更新候補`}
+              {csvPreview.unmatched.length > 0 && `、${csvPreview.unmatched.length}件未マッチ`}
+            </span>
+            <div className="flex items-center gap-2">
+              {!csvApplied && csvPreview.updates.length > 0 && (
+                <button
+                  onClick={handleCsvApply}
+                  className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                >
+                  適用する
+                </button>
+              )}
+              <button
+                onClick={() => { setCsvPreview(null); setCsvApplied(false); }}
+                className="text-xs text-zinc-500 hover:text-zinc-700"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+          {csvPreview.updates.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {csvPreview.updates.map((u, i) => (
+                <div key={i} className={`text-xs ${csvApplied ? "text-emerald-700" : "text-blue-700"}`}>
+                  {u.account_name} / {u.fund_name}: {formatNumber(u.old_quantity, 0)} → {formatNumber(u.new_quantity, 0)} 口
+                </div>
+              ))}
+            </div>
+          )}
+          {csvPreview.unmatched.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs font-medium text-amber-700">未マッチ (DBに該当銘柄なし):</p>
+              {csvPreview.unmatched.map((u, i) => (
+                <div key={i} className="text-xs text-amber-600">
+                  {u.fund_name} ({u.section}): {formatNumber(u.quantity, 0)} 口
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5">
