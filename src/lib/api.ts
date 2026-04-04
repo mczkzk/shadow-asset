@@ -77,9 +77,15 @@ export interface HoldingUpdate {
   new_quantity: number;
 }
 
+export interface UnmatchedFund {
+  fund_name: string;
+  section: string;
+  quantity: number;
+}
+
 export interface CsvImportPreview {
   updates: HoldingUpdate[];
-  unmatched: { fund_name: string; section: string; quantity: number }[];
+  unmatched: UnmatchedFund[];
 }
 
 export function previewCsvImport(path: string, broker: string): Promise<CsvImportPreview> {

@@ -100,7 +100,8 @@ fn parse_sbi(content: &str) -> Result<Vec<ParsedFund>, String> {
             continue;
         }
 
-        if first == "ファンド名"
+        if first.is_empty()
+            || first == "ファンド名"
             || first.contains("合計")
             || first.contains("総合計")
             || first == "評価額"
@@ -220,7 +221,9 @@ fn names_match(csv_name: &str, db_name: &str) -> bool {
         return true;
     }
 
-    csv_norm.contains(&db_norm) || db_norm.contains(&csv_norm)
+    // Substring fallback only if both names are long enough to avoid false positives
+    let min_len = csv_norm.len().min(db_norm.len());
+    min_len >= 8 && (csv_norm.contains(&db_norm) || db_norm.contains(&csv_norm))
 }
 
 fn account_matches(account_name: &str, account_type: &str, broker: &str, section: &str) -> bool {
@@ -350,13 +353,15 @@ pub fn apply_csv_import(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
     for u in &updates {
-        conn.execute(
+        tx.execute(
             "UPDATE holdings SET quantity = ?1 WHERE id = ?2",
             params![u.new_quantity, u.holding_id],
         )
         .map_err(|e| e.to_string())?;
     }
+    tx.commit().map_err(|e| e.to_string())?;
 
     Ok(())
 }
