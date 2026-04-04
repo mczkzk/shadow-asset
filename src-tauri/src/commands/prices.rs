@@ -87,6 +87,28 @@ fn is_gold(holding_type: &str) -> bool {
     gold_coin_oz(holding_type).is_some() || gold_bar_grams(holding_type).is_some()
 }
 
+fn asset_class_name(holding_type: &str) -> &'static str {
+    match holding_type {
+        "fund" | "dc_fund" => "投資信託",
+        "us_stock" => "米国株",
+        "us_etf" => "米国ETF",
+        "crypto" => "仮想通貨",
+        t if is_gold(t) => "ゴールド",
+        _ => "その他",
+    }
+}
+
+fn asset_class_color(class_name: &str) -> &'static str {
+    match class_name {
+        "投資信託" => "#4F46E5",
+        "米国株" => "#059669",
+        "米国ETF" => "#2563EB",
+        "仮想通貨" => "#D97706",
+        "ゴールド" => "#CA8A04",
+        _ => "#6B7280",
+    }
+}
+
 fn estimate_quantity(holding: &Holding, current_price: f64) -> f64 {
     let as_of = match &holding.as_of {
         Some(d) if !d.is_empty() => d,
@@ -319,14 +341,23 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         });
     }
 
-    let breakdown: Vec<CategoryBreakdown> = accounts_with_holdings
-        .iter()
-        .filter(|a| a.total_jpy > 0.0)
-        .map(|a| CategoryBreakdown {
-            name: a.account.name.clone(),
-            account_type: a.account.account_type.clone(),
-            value: a.total_jpy,
-            color: account_color(&a.account.account_type).to_string(),
+    // Breakdown by asset class (not by account)
+    let mut class_totals: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+    for a in &accounts_with_holdings {
+        for h in &a.holdings {
+            let class = asset_class_name(&h.holding.holding_type);
+            *class_totals.entry(class.to_string()).or_default() += h.value_jpy.unwrap_or(0.0);
+        }
+    }
+
+    let breakdown: Vec<CategoryBreakdown> = class_totals
+        .into_iter()
+        .filter(|(_, v)| *v > 0.0)
+        .map(|(name, value)| CategoryBreakdown {
+            color: asset_class_color(&name).to_string(),
+            account_type: name.clone(),
+            name,
+            value,
         })
         .collect();
 
