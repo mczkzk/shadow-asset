@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
-/// Known ISIN codes for funds not found on Yahoo Finance JP.
-/// DC-specific funds can use their general version's ISIN (same NAV).
-fn isin_for_ticker(ticker: &str) -> Option<&'static str> {
+/// If ticker is an ISIN (JP90C000...), use it directly for Rakuten SEC lookup.
+/// Also maps known Yahoo JP tickers to their ISINs as fallback.
+fn isin_for_ticker(ticker: &str) -> Option<String> {
+    // ISIN直接入力
+    if ticker.starts_with("JP90C000") {
+        return Some(ticker.to_string());
+    }
+    // 既知のYahoo JPティッカー → ISIN変換
     match ticker {
-        "JP90C000FHD2" => Some("JP90C000FHD2"), // 楽天・全米 (ISIN直接入力)
-        "JP90C000FHC4" => Some("JP90C000FHC4"), // 楽天・全世界 (ISIN直接入力)
-        "9I312179" => Some("JP90C000FHD2"),      // 楽天・全米 (Yahoo JP ticker)
+        "9I312179" => Some("JP90C000FHD2".to_string()), // 楽天・全米
         _ => None,
     }
 }
@@ -32,7 +35,7 @@ async fn fetch_single_fund_price(client: &reqwest::Client, ticker: &str) -> Opti
 
     // Fallback: try Rakuten Securities page via ISIN
     if let Some(isin) = isin_for_ticker(ticker) {
-        if let Some(price) = fetch_from_rakuten_sec(client, isin).await {
+        if let Some(price) = fetch_from_rakuten_sec(client, &isin).await {
             return Some(price);
         }
     }
@@ -131,7 +134,8 @@ mod tests {
 
     #[test]
     fn isin_lookup() {
-        assert_eq!(isin_for_ticker("9I312179"), Some("JP90C000FHD2"));
+        assert_eq!(isin_for_ticker("9I312179"), Some("JP90C000FHD2".to_string()));
+        assert_eq!(isin_for_ticker("JP90C000GCQ3"), Some("JP90C000GCQ3".to_string()));
         assert_eq!(isin_for_ticker("0331418A"), None);
     }
 }
