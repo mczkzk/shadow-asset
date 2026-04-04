@@ -13,7 +13,10 @@ pub async fn fetch_crypto_prices_jpy(symbols: &[String]) -> HashMap<String, f64>
 
     let ids: Vec<&str> = symbols
         .iter()
-        .filter_map(|s| id_map.get(s.to_uppercase().as_str()).copied())
+        .filter_map(|s| {
+            let upper = s.to_uppercase();
+            id_map.get(upper.as_str()).copied()
+        })
         .collect();
 
     if ids.is_empty() {
@@ -26,8 +29,14 @@ pub async fn fetch_crypto_prices_jpy(symbols: &[String]) -> HashMap<String, f64>
     );
 
     let result = async {
-        let resp: HashMap<String, HashMap<String, f64>> =
-            reqwest::get(&url).await?.json().await?;
+        let client = reqwest::Client::new();
+        let resp: HashMap<String, HashMap<String, f64>> = client
+            .get(&url)
+            .header("User-Agent", "Mozilla/5.0")
+            .send()
+            .await?
+            .json()
+            .await?;
 
         let mut prices = HashMap::new();
         for symbol in symbols {
