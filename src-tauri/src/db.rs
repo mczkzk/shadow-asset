@@ -51,7 +51,8 @@ pub fn initialize(app_handle: &AppHandle) -> Connection {
     let _ = conn.execute_batch(
         "UPDATE accounts SET type = 'tokutei' WHERE type = 'us_stock';
          UPDATE holdings SET holding_type = 'gold_coin' WHERE holding_type = 'gold_coin_1oz';
-         UPDATE holdings SET holding_type = 'gold_bar' WHERE holding_type = 'gold_bar_20g';",
+         UPDATE holdings SET quantity = quantity * 20, holding_type = 'gold_bar'
+           WHERE holding_type = 'gold_bar_20g';",
     );
 
     conn
