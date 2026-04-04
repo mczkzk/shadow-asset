@@ -9,8 +9,8 @@ import {
 import { useSnapshots } from "@/hooks/usePortfolio";
 import { formatJpy } from "@/lib/format";
 
-export default function AssetHistory() {
-  const { snapshots, isLoading } = useSnapshots(90);
+export default function AssetHistory({ refreshCount = 0 }: { refreshCount?: number }) {
+  const { snapshots, isLoading } = useSnapshots(90, refreshCount);
 
   if (isLoading) {
     return (

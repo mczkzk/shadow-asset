@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
-/// If ticker is an ISIN (JP90C000...), use it directly for Rakuten SEC lookup.
-/// Also maps known Yahoo JP tickers to their ISINs as fallback.
+/// Maps tickers to ISINs for Rakuten SEC fallback.
+/// ISIN tickers (JP90C000...) are passed through directly.
 fn isin_for_ticker(ticker: &str) -> Option<String> {
-    // ISIN直接入力
     if ticker.starts_with("JP90C000") {
         return Some(ticker.to_string());
     }
-    // 既知のYahoo JPティッカー → ISIN変換
     match ticker {
         "9I312179" => Some("JP90C000FHD2".to_string()), // 楽天・全米
         _ => None,
@@ -15,25 +13,37 @@ fn isin_for_ticker(ticker: &str) -> Option<String> {
 }
 
 pub async fn fetch_fund_prices(tickers: &[String]) -> HashMap<String, f64> {
-    let mut result = HashMap::new();
-    let client = reqwest::Client::new();
+    let client = super::http_client();
 
-    for ticker in tickers {
-        if let Some(price) = fetch_single_fund_price(&client, ticker).await {
-            result.insert(ticker.clone(), price);
+    let futures: Vec<_> = tickers
+        .iter()
+        .map(|ticker| {
+            let client = client.clone();
+            let ticker = ticker.clone();
+            async move {
+                let result = fetch_single_fund_price(&client, &ticker).await;
+                (ticker, result)
+            }
+        })
+        .collect();
+
+    let results = futures::future::join_all(futures).await;
+    let mut map = HashMap::new();
+    for (ticker, result) in results {
+        if let Some(price) = result {
+            map.insert(ticker, price);
         }
     }
-
-    result
+    map
 }
 
+/// Tries Yahoo Finance JP first, then falls back to Rakuten SEC via ISIN.
+/// ISINs won't match on Yahoo JP, so they always reach the Rakuten fallback.
 async fn fetch_single_fund_price(client: &reqwest::Client, ticker: &str) -> Option<f64> {
-    // Try Yahoo Finance JP first
     if let Some(price) = fetch_from_yahoo_jp(client, ticker).await {
         return Some(price);
     }
 
-    // Fallback: try Rakuten Securities page via ISIN
     if let Some(isin) = isin_for_ticker(ticker) {
         if let Some(price) = fetch_from_rakuten_sec(client, &isin).await {
             return Some(price);

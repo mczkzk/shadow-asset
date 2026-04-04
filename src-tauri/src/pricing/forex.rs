@@ -1,29 +1,8 @@
-use serde::Deserialize;
-
-#[derive(Deserialize)]
-struct YahooChartResponse {
-    chart: YahooChart,
-}
-
-#[derive(Deserialize)]
-struct YahooChart {
-    result: Option<Vec<YahooChartResult>>,
-}
-
-#[derive(Deserialize)]
-struct YahooChartResult {
-    meta: YahooMeta,
-}
-
-#[derive(Deserialize)]
-struct YahooMeta {
-    #[serde(rename = "regularMarketPrice")]
-    regular_market_price: Option<f64>,
-}
+use super::yahoo_types::YahooChartResponse;
 
 pub async fn fetch_usd_jpy() -> f64 {
     let result = async {
-        let client = reqwest::Client::new();
+        let client = super::http_client();
         let resp: YahooChartResponse = client
             .get("https://query2.finance.yahoo.com/v8/finance/chart/JPY=X?range=1d&interval=1d")
             .header("User-Agent", "Mozilla/5.0")

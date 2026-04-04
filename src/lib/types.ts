@@ -77,6 +77,15 @@ interface PortfolioData {
   breakdown: CategoryBreakdown[];
 }
 
+const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  nisa: "NISA",
+  ideco: "iDeCo",
+  tokutei: "特定口座",
+  crypto: "仮想通貨",
+  gold: "ゴールド",
+  dc: "確定拠出年金",
+};
+
 export type {
   AccountType,
   HoldingType,
@@ -88,3 +97,5 @@ export type {
   CategoryBreakdown,
   PortfolioData,
 };
+
+export { ACCOUNT_TYPE_LABELS };

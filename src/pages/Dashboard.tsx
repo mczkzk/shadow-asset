@@ -5,7 +5,7 @@ import AccountList from "@/components/dashboard/AccountList";
 import AssetHistory from "@/components/dashboard/AssetHistory";
 
 export default function Dashboard() {
-  const { data, isLoading, error, refresh } = usePortfolio();
+  const { data, isLoading, error, refresh, refreshCount } = usePortfolio();
 
   if (isLoading) {
     return (
@@ -51,7 +51,7 @@ export default function Dashboard() {
           breakdown={data.breakdown}
           totalJpy={data.total_jpy}
         />
-        <AssetHistory />
+        <AssetHistory refreshCount={refreshCount} />
       </div>
       <AccountList accounts={data.accounts} />
     </div>

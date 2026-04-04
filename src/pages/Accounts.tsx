@@ -1,17 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Account, Holding, AccountType, HoldingType } from "@/lib/types";
+import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 import { ACCOUNT_PRESETS, HOLDING_PRESETS } from "@/lib/presets";
 import { formatNumber } from "@/lib/format";
 import * as api from "@/lib/api";
-
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  nisa: "NISA",
-  ideco: "iDeCo",
-  tokutei: "特定口座",
-  crypto: "仮想通貨",
-  gold: "ゴールド",
-  dc: "確定拠出年金",
-};
 
 // 口座種類ごとに登録可能な保有種類
 // NISA/特定口座: 投信も米国株もETFも全て保有可能

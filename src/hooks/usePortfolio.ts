@@ -6,6 +6,7 @@ function usePortfolio() {
   const [data, setData] = useState<PortfolioData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -13,6 +14,7 @@ function usePortfolio() {
     try {
       const result = await fetchPortfolio();
       setData(result);
+      setRefreshCount((c) => c + 1);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -24,18 +26,19 @@ function usePortfolio() {
     load();
   }, [load]);
 
-  return { data, isLoading, error, refresh: load };
+  return { data, isLoading, error, refresh: load, refreshCount };
 }
 
-function useSnapshots(days = 90) {
+function useSnapshots(days = 90, refreshCount = 0) {
   const [snapshots, setSnapshots] = useState<Snapshot[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     getSnapshots(days)
       .then(setSnapshots)
       .finally(() => setIsLoading(false));
-  }, [days]);
+  }, [days, refreshCount]);
 
   return { snapshots, isLoading };
 }

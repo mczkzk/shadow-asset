@@ -15,7 +15,7 @@ struct GoldApiResponse {
 
 /// Fetch gold buyback prices from Tanaka Kikinzoku, fallback to gold-api.com
 pub async fn fetch_gold_prices() -> GoldPrices {
-    let client = reqwest::Client::new();
+    let client = super::http_client();
 
     if let Some(prices) = fetch_from_tanaka(&client).await {
         return prices;
@@ -118,14 +118,19 @@ fn parse_tanaka_prices(html: &str) -> GoldPrices {
         i += 1;
     }
 
+    // NOTE: depends on Tanaka page structure. If prices parse incorrectly, check HTML layout.
     // [1] = gold bar buyback per gram (税込)
     // [9] = coin 1oz buyback (税込)
-    let bar_per_gram = yen_values.get(1).copied().unwrap_or(25000.0);
-    let coin_1oz = yen_values.get(9).copied().unwrap_or(800000.0);
+    let bar_per_gram = yen_values.get(1).copied().unwrap_or(0.0);
+    let coin_1oz = yen_values.get(9).copied().unwrap_or(0.0);
+
+    // Sanity check: reject obviously wrong values
+    let bar_ok = bar_per_gram >= 5000.0 && bar_per_gram <= 100000.0;
+    let coin_ok = coin_1oz >= 100000.0 && coin_1oz <= 5000000.0;
 
     GoldPrices {
-        coin_1oz_jpy: coin_1oz,
-        bar_per_gram_jpy: bar_per_gram,
+        coin_1oz_jpy: if coin_ok { coin_1oz } else { 0.0 },
+        bar_per_gram_jpy: if bar_ok { bar_per_gram } else { 0.0 },
     }
 }
 
@@ -154,9 +159,9 @@ mod tests {
     }
 
     #[test]
-    fn returns_defaults_for_empty_html() {
+    fn returns_zero_for_empty_html() {
         let prices = parse_tanaka_prices("");
-        assert_eq!(prices.bar_per_gram_jpy, 25000.0);
-        assert_eq!(prices.coin_1oz_jpy, 800000.0);
+        assert_eq!(prices.bar_per_gram_jpy, 0.0);
+        assert_eq!(prices.coin_1oz_jpy, 0.0);
     }
 }

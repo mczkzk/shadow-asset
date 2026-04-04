@@ -29,7 +29,7 @@ pub async fn fetch_crypto_prices_jpy(symbols: &[String]) -> HashMap<String, f64>
     );
 
     let result = async {
-        let client = reqwest::Client::new();
+        let client = super::http_client();
         let resp: HashMap<String, HashMap<String, f64>> = client
             .get(&url)
             .header("User-Agent", "Mozilla/5.0")

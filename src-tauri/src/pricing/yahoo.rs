@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use serde::Deserialize;
+use super::yahoo_types::YahooChartResponse;
 
 #[derive(Debug)]
 pub struct StockPrice {
@@ -7,44 +7,29 @@ pub struct StockPrice {
     pub currency: String,
 }
 
-#[derive(Deserialize)]
-struct YahooChartResponse {
-    chart: YahooChart,
-}
-
-#[derive(Deserialize)]
-struct YahooChart {
-    result: Option<Vec<YahooChartResult>>,
-}
-
-#[derive(Deserialize)]
-struct YahooChartResult {
-    meta: YahooMeta,
-}
-
-#[derive(Deserialize)]
-struct YahooMeta {
-    #[serde(rename = "regularMarketPrice")]
-    regular_market_price: Option<f64>,
-    currency: Option<String>,
-    symbol: Option<String>,
-}
-
 pub async fn fetch_stock_prices(tickers: &[String]) -> HashMap<String, StockPrice> {
-    let mut result = HashMap::new();
-    let client = reqwest::Client::new();
+    let client = super::http_client();
 
-    for ticker in tickers {
-        if let Some(price) = fetch_single_price(&client, ticker).await {
-            let symbol = price.2.to_uppercase();
-            result.insert(symbol, StockPrice {
-                price: price.0,
-                currency: price.1,
-            });
+    let futures: Vec<_> = tickers
+        .iter()
+        .map(|ticker| {
+            let client = client.clone();
+            let ticker = ticker.clone();
+            async move {
+                let result = fetch_single_price(&client, &ticker).await;
+                (ticker, result)
+            }
+        })
+        .collect();
+
+    let results = futures::future::join_all(futures).await;
+    let mut map = HashMap::new();
+    for (_, result) in results {
+        if let Some((price, currency, symbol)) = result {
+            map.insert(symbol.to_uppercase(), StockPrice { price, currency });
         }
     }
-
-    result
+    map
 }
 
 async fn fetch_single_price(

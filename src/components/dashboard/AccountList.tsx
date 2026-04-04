@@ -1,5 +1,6 @@
 import { formatJpy, formatNumber } from "@/lib/format";
 import type { AccountWithHoldings, HoldingWithValue } from "@/lib/types";
+import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 
 function unitLabel(holdingType: string): string {
   if (holdingType === "fund" || holdingType === "dc_fund") return "口";
@@ -12,15 +13,6 @@ function unitLabel(holdingType: string): string {
 interface AccountListProps {
   accounts: AccountWithHoldings[];
 }
-
-const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-  nisa: "NISA",
-  ideco: "iDeCo",
-  tokutei: "特定口座",
-  crypto: "仮想通貨",
-  gold: "ゴールド",
-  dc: "確定拠出年金",
-};
 
 const HOLDING_GROUP_LABELS: Record<string, string> = {
   fund: "投資信託",
