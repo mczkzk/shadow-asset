@@ -14,20 +14,18 @@ pub async fn fetch_stock_prices(tickers: &[String]) -> HashMap<String, StockPric
         .iter()
         .map(|ticker| {
             let client = client.clone();
-            let ticker = ticker.clone();
-            async move {
-                let result = fetch_single_price(&client, &ticker).await;
-                (ticker, result)
-            }
+            let ticker = ticker.as_str().to_owned();
+            async move { fetch_single_price(&client, &ticker).await }
         })
         .collect();
 
     let results = futures::future::join_all(futures).await;
     let mut map = HashMap::new();
-    for (_, result) in results {
-        if let Some((price, currency, symbol)) = result {
-            map.insert(symbol.to_uppercase(), StockPrice { price, currency });
-        }
+    for result in results.into_iter().flatten() {
+        map.insert(result.2.to_uppercase(), StockPrice {
+            price: result.0,
+            currency: result.1,
+        });
     }
     map
 }

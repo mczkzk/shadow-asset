@@ -1,24 +1,24 @@
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct YahooChartResponse {
-    pub chart: YahooChart,
+pub(super) struct YahooChartResponse {
+    pub(super) chart: YahooChart,
 }
 
 #[derive(Deserialize)]
-pub struct YahooChart {
-    pub result: Option<Vec<YahooChartResult>>,
+pub(super) struct YahooChart {
+    pub(super) result: Option<Vec<YahooChartResult>>,
 }
 
 #[derive(Deserialize)]
-pub struct YahooChartResult {
-    pub meta: YahooMeta,
+pub(super) struct YahooChartResult {
+    pub(super) meta: YahooMeta,
 }
 
 #[derive(Deserialize)]
-pub struct YahooMeta {
+pub(super) struct YahooMeta {
     #[serde(rename = "regularMarketPrice")]
-    pub regular_market_price: Option<f64>,
-    pub currency: Option<String>,
-    pub symbol: Option<String>,
+    pub(super) regular_market_price: Option<f64>,
+    pub(super) currency: Option<String>,
+    pub(super) symbol: Option<String>,
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { PortfolioData, Snapshot } from "@/lib/types";
 import { fetchPortfolio, getSnapshots } from "@/lib/api";
 
@@ -32,8 +32,16 @@ function usePortfolio() {
 function useSnapshots(days = 90, refreshCount = 0) {
   const [snapshots, setSnapshots] = useState<Snapshot[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const prevCount = useRef(refreshCount);
 
   useEffect(() => {
+    // Skip the re-fetch triggered by initial load's refreshCount change
+    if (prevCount.current === 0 && refreshCount === 1) {
+      prevCount.current = refreshCount;
+      return;
+    }
+    prevCount.current = refreshCount;
+
     setIsLoading(true);
     getSnapshots(days)
       .then(setSnapshots)
