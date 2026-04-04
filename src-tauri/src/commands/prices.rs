@@ -351,3 +351,115 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         breakdown,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_holding(holding_type: &str, quantity: f64) -> Holding {
+        Holding {
+            id: 1,
+            account_id: 1,
+            ticker: "TEST".to_string(),
+            name: "Test".to_string(),
+            quantity,
+            holding_type: holding_type.to_string(),
+            as_of: None,
+            monthly_amount: None,
+        }
+    }
+
+    #[test]
+    fn gold_coin_sizes() {
+        assert_eq!(gold_coin_oz("gold_coin_1oz"), Some(1.0));
+        assert_eq!(gold_coin_oz("gold_coin_half_oz"), Some(0.5));
+        assert_eq!(gold_coin_oz("gold_coin_quarter_oz"), Some(0.25));
+        assert_eq!(gold_coin_oz("gold_coin_tenth_oz"), Some(0.1));
+        assert_eq!(gold_coin_oz("us_stock"), None);
+    }
+
+    #[test]
+    fn gold_bar_sizes() {
+        assert_eq!(gold_bar_grams("gold_bar_5g"), Some(5.0));
+        assert_eq!(gold_bar_grams("gold_bar_20g"), Some(20.0));
+        assert_eq!(gold_bar_grams("gold_bar_1kg"), Some(1000.0));
+        assert_eq!(gold_bar_grams("fund"), None);
+    }
+
+    #[test]
+    fn gold_coin_value_calculation() {
+        let h = make_holding("gold_coin_1oz", 2.0);
+        let result = calculate_value(&h, None, "JPY", 150.0, 800000.0, 25000.0);
+        // 2 coins × 800,000/oz × 1oz = 1,600,000
+        assert_eq!(result.value_jpy, Some(1600000.0));
+        assert_eq!(result.price, Some(800000.0));
+    }
+
+    #[test]
+    fn gold_coin_half_oz_value() {
+        let h = make_holding("gold_coin_half_oz", 3.0);
+        let result = calculate_value(&h, None, "JPY", 150.0, 800000.0, 25000.0);
+        // 3 coins × 800,000 × 0.5oz = 1,200,000
+        assert_eq!(result.value_jpy, Some(1200000.0));
+    }
+
+    #[test]
+    fn gold_bar_20g_value() {
+        let h = make_holding("gold_bar_20g", 2.0);
+        let result = calculate_value(&h, None, "JPY", 150.0, 800000.0, 26499.0);
+        // 2 bars × 26,499/g × 20g = 1,059,960
+        assert_eq!(result.value_jpy, Some(1059960.0));
+        assert_eq!(result.price, Some(529980.0)); // per bar
+    }
+
+    #[test]
+    fn us_stock_value() {
+        let h = make_holding("us_stock", 10.0);
+        let result = calculate_value(&h, Some(150.0), "USD", 150.0, 0.0, 0.0);
+        // 10 shares × $150 × 150 JPY/USD = 225,000
+        assert_eq!(result.value_jpy, Some(225000.0));
+    }
+
+    #[test]
+    fn fund_value_per_10000_units() {
+        let h = make_holding("fund", 50000.0);
+        let result = calculate_value(&h, Some(25000.0), "JPY", 150.0, 0.0, 0.0);
+        // 50,000口 / 10,000 × 25,000 = 125,000
+        assert_eq!(result.value_jpy, Some(125000.0));
+    }
+
+    #[test]
+    fn crypto_jpy_value() {
+        let h = make_holding("crypto", 0.5);
+        let result = calculate_value(&h, Some(10000000.0), "JPY", 150.0, 0.0, 0.0);
+        // 0.5 BTC × 10,000,000 = 5,000,000
+        assert_eq!(result.value_jpy, Some(5000000.0));
+    }
+
+    #[test]
+    fn missing_price_returns_none() {
+        let h = make_holding("us_stock", 10.0);
+        let result = calculate_value(&h, None, "USD", 150.0, 0.0, 0.0);
+        assert_eq!(result.value_jpy, None);
+    }
+
+    #[test]
+    fn estimate_quantity_no_tsumitate() {
+        let h = make_holding("fund", 10000.0);
+        assert_eq!(estimate_quantity(&h, 25000.0), 10000.0);
+    }
+
+    #[test]
+    fn estimate_quantity_with_tsumitate() {
+        let h = Holding {
+            as_of: Some("2025-01-01".to_string()),
+            monthly_amount: Some(50000.0),
+            ..make_holding("fund", 10000.0)
+        };
+        let result = estimate_quantity(&h, 25000.0);
+        // Months from 2025-01 to now (2026-04) = ~15 months
+        // Additional = 15 × 50000 / 25000 = 30
+        // Total = 10000 + 30 = 10030
+        assert!(result > 10000.0);
+    }
+}

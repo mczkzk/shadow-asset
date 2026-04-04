@@ -66,3 +66,38 @@ fn parse_fund_price(html: &str) -> Option<f64> {
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_fund_price_from_html() {
+        let html = r#"<div>基準価額</div><span>33,265</span><p>other>100<stuff"#;
+        // 33,265 is not in >XX,XXX< format here, let's use proper HTML
+        let html = r#"<td>純資産</td><td>10,253,628</td><td>前日比</td><span>33,265</span>"#;
+        // Not >..< pattern. Use proper:
+        let html = r#"<td>10,253,628</td><td>319,505</td><span>33,265</span>"#;
+        // >33,265< matches pattern and is in 5k-200k range
+        let html = r#"<p>stuff</p><td>10,253,628</td><td>319,505</td><td>33,265</td>"#;
+        assert_eq!(parse_fund_price(html), Some(33265.0));
+    }
+
+    #[test]
+    fn skips_values_outside_fund_range() {
+        let html = r#"<td>100</td><td>10,253,628</td><td>33,265</td>"#;
+        // 100 is too small, 10,253,628 is too large, 33,265 is in range
+        assert_eq!(parse_fund_price(html), Some(33265.0));
+    }
+
+    #[test]
+    fn returns_none_for_no_match() {
+        let html = r#"<td>100</td><td>10,000,000</td>"#;
+        assert_eq!(parse_fund_price(html), None);
+    }
+
+    #[test]
+    fn returns_none_for_empty() {
+        assert_eq!(parse_fund_price(""), None);
+    }
+}

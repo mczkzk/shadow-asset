@@ -88,3 +88,35 @@ fn parse_tanaka_prices(html: &str) -> GoldPrices {
         bar_per_gram_jpy: bar_per_gram,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_tanaka_prices() {
+        // Simulated Tanaka HTML with >XX,XXX 円< pattern
+        let html = concat!(
+            "<td>26,856 円</td>",  // [0] bar retail
+            "<td>26,499 円</td>",  // [1] bar buyback
+            "<td>11,455 円</td>",  // [2] platinum retail
+            "<td>11,032 円</td>",  // [3] platinum buyback
+            "<td>26,856 円</td>",  // [4] (duplicate section)
+            "<td>26,499 円</td>",  // [5]
+            "<td>11,455 円</td>",  // [6]
+            "<td>11,032 円</td>",  // [7]
+            "<td>886,141 円</td>", // [8] coin 1oz retail
+            "<td>806,132 円</td>", // [9] coin 1oz buyback
+        );
+        let prices = parse_tanaka_prices(html);
+        assert_eq!(prices.bar_per_gram_jpy, 26499.0);
+        assert_eq!(prices.coin_1oz_jpy, 806132.0);
+    }
+
+    #[test]
+    fn returns_defaults_for_empty_html() {
+        let prices = parse_tanaka_prices("");
+        assert_eq!(prices.bar_per_gram_jpy, 25000.0);
+        assert_eq!(prices.coin_1oz_jpy, 800000.0);
+    }
+}
