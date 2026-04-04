@@ -47,5 +47,10 @@ pub fn initialize(app_handle: &AppHandle) -> Connection {
     )
     .expect("failed to create tables");
 
+    // Migrate: us_stock account type was removed, merge into tokutei
+    let _ = conn.execute_batch(
+        "UPDATE accounts SET type = 'tokutei' WHERE type = 'us_stock';",
+    );
+
     conn
 }

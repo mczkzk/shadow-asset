@@ -2,7 +2,6 @@ type AccountType =
   | "nisa"
   | "ideco"
   | "tokutei"
-  | "us_stock"
   | "crypto"
   | "gold"
   | "dc";

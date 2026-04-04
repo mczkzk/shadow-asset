@@ -9,7 +9,6 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   nisa: "NISA",
   ideco: "iDeCo",
   tokutei: "特定口座",
-  us_stock: "米国株",
   crypto: "仮想通貨",
   gold: "ゴールド",
   dc: "確定拠出年金",

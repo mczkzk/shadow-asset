@@ -8,18 +8,17 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   nisa: "NISA",
   ideco: "iDeCo",
   tokutei: "特定口座",
-  us_stock: "米国株",
   crypto: "仮想通貨",
   gold: "ゴールド",
   dc: "確定拠出年金",
 };
 
-// Allowed holding types per account type
+// 口座種類ごとに登録可能な保有種類
+// NISA/特定口座: 投信も米国株もETFも全て保有可能
 const ALLOWED_HOLDING_TYPES: Record<AccountType, HoldingType[]> = {
   nisa: ["fund", "us_stock", "us_etf"],
   ideco: ["fund"],
   tokutei: ["fund", "us_stock", "us_etf"],
-  us_stock: ["us_stock", "us_etf"],
   crypto: ["crypto"],
   gold: ["gold_coin_1oz", "gold_bar_20g"],
   dc: ["dc_fund"],

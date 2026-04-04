@@ -53,7 +53,6 @@ fn account_color(account_type: &str) -> &'static str {
         "nisa" => "#4F46E5",
         "ideco" => "#7C3AED",
         "tokutei" => "#2563EB",
-        "us_stock" => "#059669",
         "crypto" => "#D97706",
         "gold" => "#CA8A04",
         "dc" => "#DC2626",

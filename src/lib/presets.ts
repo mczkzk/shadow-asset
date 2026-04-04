@@ -5,7 +5,8 @@ interface AccountPreset {
   type: AccountType;
 }
 
-// Major brokerage presets grouped by account type
+// Account = 証券会社 x 口座種類
+// 米国株は口座ではなく保有銘柄の種類(特定口座やNISA内で保有)
 export const ACCOUNT_PRESETS: AccountPreset[] = [
   // NISA
   { name: "SBI証券 NISA", type: "nisa" },
@@ -25,10 +26,6 @@ export const ACCOUNT_PRESETS: AccountPreset[] = [
   { name: "auカブコム証券", type: "tokutei" },
   { name: "野村證券", type: "tokutei" },
   { name: "大和証券", type: "tokutei" },
-  // 米国株
-  { name: "SBI証券 米国株", type: "us_stock" },
-  { name: "楽天証券 米国株", type: "us_stock" },
-  { name: "マネックス証券 米国株", type: "us_stock" },
   // 仮想通貨
   { name: "bitFlyer", type: "crypto" },
   { name: "Coincheck", type: "crypto" },
@@ -51,7 +48,7 @@ interface HoldingPreset {
 }
 
 export const HOLDING_PRESETS: HoldingPreset[] = [
-  // 投資信託 (人気順)
+  // 投資信託
   { ticker: "0331418A", name: "eMAXIS Slim 全世界株式(オール・カントリー)", holdingType: "fund" },
   { ticker: "03311187", name: "eMAXIS Slim 米国株式(S&P500)", holdingType: "fund" },
   { ticker: "89311199", name: "SBI・V・S&P500インデックス・ファンド", holdingType: "fund" },
