@@ -1,0 +1,24 @@
+[package]
+name = "shadow-asset"
+version = "0.1.0"
+description = "Privacy-first asset simulator"
+authors = ["mczkzk"]
+edition = "2021"
+
+[lib]
+name = "shadow_asset_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.31", features = ["bundled"] }
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+chrono = "0.4"
+futures = "0.3"

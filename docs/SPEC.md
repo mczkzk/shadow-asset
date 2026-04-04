@@ -19,9 +19,9 @@ Tauriデスクトップアプリ (.app/.dmg)。ワンクリックで起動、ロ
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
 - **Database**: SQLite via rusqlite (Rust側で管理)
 - **Price Data**: Rust HTTP client (reqwest) で外部API呼び出し
-  - Yahoo Finance (stocks/ETFs/funds)
-  - gold-api.com (gold price)
-  - frankfurter.dev (USD/JPY)
+  - Yahoo Finance (US stocks/ETFs, USD/JPY)
+  - Yahoo Finance JP + Rakuten SEC fallback (JP funds/DC funds, ISIN対応)
+  - 田中貴金属 (gold buyback price, fallback: gold-api.com spot price)
   - CoinGecko (crypto)
 
 ## Asset Categories
@@ -42,24 +42,19 @@ iDeCo
 ├─ eMAXIS Slim オルカン
 └─ SBI V S&P500
 
-米国株
-├─ GLDM (SPDRゴールド ミニシェアーズ)
-├─ GOOGL (アルファベット)
-└─ NVDA (エヌビディア)
-
 仮想通貨
 ├─ BTC
 ├─ ETH
 └─ BCH
 
 ゴールド現物
-├─ 金貨1oz
-└─ 金地金20g
+├─ 金貨 (1oz / 1/2oz / 1/4oz / 1/10oz)
+└─ 金地金 (5g / 10g / 20g / 50g / 100g / 500g / 1kg)
 
 確定拠出年金(DC)
-├─ 楽天全世界INDEX楽天DC
-├─ 楽天全米INDEX楽天DC
-└─ 楽天INDEXバランス楽天DC
+├─ 楽天・全米株式インデックス・ファンド (JP90C000FHD2)
+├─ 楽天・全世界株式インデックス・ファンド (JP90C000FHC4)
+└─ 楽天・インデックス・バランス(DC年金) (JP90C000GCQ3)
 ```
 
 ※ 数量はDB(gitignore対象)にのみ保存。このファイルには記載しない。
@@ -89,13 +84,13 @@ shadow-asset.db     ← SQLite, .gitignoreで除外
 - Store quantities only, derive all JPY values from market prices
 - Tauri desktop app (not web) for one-click launch and local-only data
 
-## MVP Scope
+## MVP Scope (全て実装済み)
 1. **ダッシュボード**: 総資産額、口座別内訳(ドーナツチャート)、口座別リスト
 2. **保有管理**: 口座の追加/編集/削除、銘柄の追加/編集/削除
 3. **リアルタイム価格**: 株/ETF/投信/金/為替/仮想通貨の現在価格取得
-4. **資産推移**: 日次スナップショット保存、折れ線グラフ表示
+4. **資産推移**: 日次スナップショット保存、折れ線グラフ表示(90日)
 
-### 後回し
+### 未実装
 - 積立シミュレーション(将来の資産予測)
 - 損益計算(取得価額との比較)
 - エクスポート/インポート機能
