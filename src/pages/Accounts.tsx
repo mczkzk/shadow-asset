@@ -306,7 +306,7 @@ function HoldingForm({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例: エヌビディア"
+            placeholder={accountType === "crypto" ? "例: ビットコイン" : "例: アルファベット"}
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
           />
         </div>
@@ -317,7 +317,7 @@ function HoldingForm({
             step="any"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            placeholder="例: 10"
+            placeholder={accountType === "crypto" ? "例: 0.5" : "例: 10"}
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
           />
         </div>
