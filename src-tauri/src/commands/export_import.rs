@@ -43,82 +43,82 @@ struct ExportData {
 
 #[tauri::command]
 pub fn export_data(state: State<AppState>, path: String) -> Result<(), String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = db.as_ref().ok_or("database not initialized")?;
+    // Build JSON while holding the lock, then release before file I/O
+    let json = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = db.as_ref().ok_or("database not initialized")?;
 
-    // Read accounts
-    let mut stmt = conn
-        .prepare("SELECT id, name, type, sort_order FROM accounts ORDER BY sort_order, id")
-        .map_err(|e| e.to_string())?;
+        let mut stmt = conn
+            .prepare("SELECT id, name, type, sort_order FROM accounts ORDER BY sort_order, id")
+            .map_err(|e| e.to_string())?;
 
-    let accounts: Vec<(i64, String, String, i64)> = stmt
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+        let accounts: Vec<(i64, String, String, i64)> = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
 
-    // Read holdings per account
-    let mut holdings_stmt = conn
-        .prepare(
-            "SELECT ticker, name, quantity, holding_type, as_of, monthly_amount
-             FROM holdings WHERE account_id = ?1 ORDER BY id",
-        )
-        .map_err(|e| e.to_string())?;
+        let mut holdings_stmt = conn
+            .prepare(
+                "SELECT ticker, name, quantity, holding_type, as_of, monthly_amount
+                 FROM holdings WHERE account_id = ?1 ORDER BY id",
+            )
+            .map_err(|e| e.to_string())?;
 
-    let export_accounts: Vec<ExportAccount> = accounts
-        .into_iter()
-        .map(|(id, name, account_type, sort_order)| {
-            let holdings = holdings_stmt
-                .query_map(params![id], |row| {
-                    Ok(ExportHolding {
-                        ticker: row.get(0)?,
-                        name: row.get(1)?,
-                        quantity: row.get(2)?,
-                        holding_type: row.get(3)?,
-                        as_of: row.get(4)?,
-                        monthly_amount: row.get(5)?,
+        let export_accounts: Vec<ExportAccount> = accounts
+            .into_iter()
+            .map(|(id, name, account_type, sort_order)| {
+                let holdings = holdings_stmt
+                    .query_map(params![id], |row| {
+                        Ok(ExportHolding {
+                            ticker: row.get(0)?,
+                            name: row.get(1)?,
+                            quantity: row.get(2)?,
+                            holding_type: row.get(3)?,
+                            as_of: row.get(4)?,
+                            monthly_amount: row.get(5)?,
+                        })
                     })
+                    .map_err(|e| e.to_string())?
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| e.to_string())?;
+
+                Ok(ExportAccount {
+                    name,
+                    account_type,
+                    sort_order,
+                    holdings,
                 })
-                .map_err(|e| e.to_string())?
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| e.to_string())?;
-
-            Ok(ExportAccount {
-                name,
-                account_type,
-                sort_order,
-                holdings,
             })
-        })
-        .collect::<Result<Vec<_>, String>>()?;
+            .collect::<Result<Vec<_>, String>>()?;
 
-    // Read snapshots
-    let mut snap_stmt = conn
-        .prepare("SELECT date, total_jpy, breakdown_json FROM snapshots ORDER BY date")
-        .map_err(|e| e.to_string())?;
+        let mut snap_stmt = conn
+            .prepare("SELECT date, total_jpy, breakdown_json FROM snapshots ORDER BY date")
+            .map_err(|e| e.to_string())?;
 
-    let snapshots = snap_stmt
-        .query_map([], |row| {
-            Ok(ExportSnapshot {
-                date: row.get(0)?,
-                total_jpy: row.get(1)?,
-                breakdown_json: row.get(2)?,
+        let snapshots = snap_stmt
+            .query_map([], |row| {
+                Ok(ExportSnapshot {
+                    date: row.get(0)?,
+                    total_jpy: row.get(1)?,
+                    breakdown_json: row.get(2)?,
+                })
             })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
 
-    let export = ExportData {
-        version: 1,
-        exported_at: chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string(),
-        accounts: export_accounts,
-        snapshots,
+        let export = ExportData {
+            version: 1,
+            exported_at: chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string(),
+            accounts: export_accounts,
+            snapshots,
+        };
+
+        serde_json::to_string_pretty(&export).map_err(|e| e.to_string())?
     };
 
-    let json = serde_json::to_string_pretty(&export).map_err(|e| e.to_string())?;
     fs::write(&path, json).map_err(|e| e.to_string())?;
-
     Ok(())
 }
 

@@ -618,6 +618,7 @@ export default function Accounts() {
       setConfirmImport(null);
       await refresh();
     } catch (e) {
+      setConfirmImport(null);
       setExportImportError(`インポート失敗: ${e}`);
     }
   };
@@ -654,7 +655,7 @@ export default function Accounts() {
       {confirmImport && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
           <span className="text-amber-800">
-            <span className="font-medium">{confirmImport.split("/").pop()}</span>
+            <span className="font-medium">{confirmImport.replace(/.*[/\\]/, "")}</span>
             {" "}をインポートすると既存データが全て置き換わります。続行しますか?
           </span>
           <button
