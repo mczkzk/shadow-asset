@@ -68,6 +68,28 @@ export function importData(path: string): Promise<void> {
   return invoke("import_data", { path });
 }
 
+// CSV Import
+export interface HoldingUpdate {
+  holding_id: number;
+  account_name: string;
+  fund_name: string;
+  old_quantity: number;
+  new_quantity: number;
+}
+
+export interface CsvImportPreview {
+  updates: HoldingUpdate[];
+  unmatched: { fund_name: string; section: string; quantity: number }[];
+}
+
+export function previewCsvImport(path: string, broker: string): Promise<CsvImportPreview> {
+  return invoke("preview_csv_import", { path, broker });
+}
+
+export function applyCsvImport(updates: HoldingUpdate[]): Promise<void> {
+  return invoke("apply_csv_import", { updates });
+}
+
 // Portfolio
 export function fetchPortfolio(): Promise<PortfolioData> {
   return invoke("fetch_portfolio");
