@@ -39,8 +39,8 @@ function groupHoldings(
       case "crypto":
         key = "crypto";
         break;
-      case "gold_coin_1oz":
-      case "gold_bar_20g":
+      case "gold_coin":
+      case "gold_bar":
         key = "gold";
         break;
       default:
@@ -92,7 +92,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
         {h.price != null && (
           <p className="text-xs text-zinc-400">
             {h.holding_type.startsWith("gold_")
-              ? `田中買取 @${formatNumber(h.price, 0)}円`
+              ? `田中貴金属買取 @${formatNumber(h.price, 0)}円`
               : `@${h.currency === "USD" ? "$" : ""}${formatNumber(h.price, 2)}`}
           </p>
         )}

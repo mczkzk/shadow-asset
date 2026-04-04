@@ -20,7 +20,7 @@ const ALLOWED_HOLDING_TYPES: Record<AccountType, HoldingType[]> = {
   ideco: ["fund"],
   tokutei: ["fund", "us_stock", "us_etf"],
   crypto: ["crypto"],
-  gold: ["gold_coin_1oz", "gold_bar_20g"],
+  gold: ["gold_coin", "gold_bar"],
   dc: ["dc_fund"],
 };
 
@@ -29,8 +29,8 @@ const HOLDING_TYPE_LABELS: Record<HoldingType, string> = {
   us_stock: "米国株",
   us_etf: "米国ETF",
   crypto: "仮想通貨",
-  gold_coin_1oz: "金貨1oz",
-  gold_bar_20g: "金地金20g",
+  gold_coin: "金貨",
+  gold_bar: "金地金",
   dc_fund: "DC年金ファンド",
 };
 
@@ -113,7 +113,21 @@ function AccountForm({
   );
 }
 
-// Gold: just pick type and quantity
+// Gold presets: coin sizes in oz, bar sizes in grams
+const GOLD_PRESETS = [
+  { label: "金貨 1oz", holdingType: "gold_coin" as const, size: 1, unit: "oz" },
+  { label: "金貨 1/2oz", holdingType: "gold_coin" as const, size: 0.5, unit: "oz" },
+  { label: "金貨 1/4oz", holdingType: "gold_coin" as const, size: 0.25, unit: "oz" },
+  { label: "金貨 1/10oz", holdingType: "gold_coin" as const, size: 0.1, unit: "oz" },
+  { label: "金地金 1kg", holdingType: "gold_bar" as const, size: 1000, unit: "g" },
+  { label: "金地金 500g", holdingType: "gold_bar" as const, size: 500, unit: "g" },
+  { label: "金地金 100g", holdingType: "gold_bar" as const, size: 100, unit: "g" },
+  { label: "金地金 50g", holdingType: "gold_bar" as const, size: 50, unit: "g" },
+  { label: "金地金 20g", holdingType: "gold_bar" as const, size: 20, unit: "g" },
+  { label: "金地金 10g", holdingType: "gold_bar" as const, size: 10, unit: "g" },
+  { label: "金地金 5g", holdingType: "gold_bar" as const, size: 5, unit: "g" },
+];
+
 function GoldHoldingForm({
   accountId,
   onCreated,
@@ -121,23 +135,26 @@ function GoldHoldingForm({
   accountId: number;
   onCreated: () => void;
 }) {
-  const [holdingType, setHoldingType] = useState<"gold_coin_1oz" | "gold_bar_20g">("gold_coin_1oz");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [quantity, setQuantity] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const label = holdingType === "gold_coin_1oz" ? "金貨 1oz" : "金地金 20g";
+  const preset = GOLD_PRESETS[selectedIndex];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quantity) return;
     setError(null);
+    // quantity = number of coins/bars. Store actual oz/g as quantity for calculation.
+    const count = parseFloat(quantity);
+    const totalSize = preset.size * count;
     try {
       await api.createHolding({
         account_id: accountId,
-        ticker: holdingType === "gold_coin_1oz" ? "GOLD_COIN_1OZ" : "GOLD_BAR_20G",
-        name: label,
-        quantity: parseFloat(quantity),
-        holding_type: holdingType,
+        ticker: `GOLD_${preset.holdingType === "gold_coin" ? "COIN" : "BAR"}`,
+        name: `${preset.label} x${count}`,
+        quantity: totalSize, // oz for coins, g for bars
+        holding_type: preset.holdingType,
         as_of: null,
         monthly_amount: null,
       });
@@ -151,21 +168,23 @@ function GoldHoldingForm({
   return (
     <form onSubmit={handleSubmit} className="mt-3 flex items-end gap-3 rounded-lg bg-zinc-50 p-3">
       <div>
-        <label className="block text-xs text-zinc-500">種類</label>
+        <label className="block text-xs text-zinc-500">種類・サイズ</label>
         <select
-          value={holdingType}
-          onChange={(e) => setHoldingType(e.target.value as "gold_coin_1oz" | "gold_bar_20g")}
+          value={selectedIndex}
+          onChange={(e) => setSelectedIndex(parseInt(e.target.value))}
           className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm"
         >
-          <option value="gold_coin_1oz">金貨 1oz</option>
-          <option value="gold_bar_20g">金地金 20g</option>
+          {GOLD_PRESETS.map((p, i) => (
+            <option key={p.label} value={i}>{p.label}</option>
+          ))}
         </select>
       </div>
       <div>
-        <label className="block text-xs text-zinc-500">数量</label>
+        <label className="block text-xs text-zinc-500">個数</label>
         <input
           type="number"
-          step="any"
+          step="1"
+          min="1"
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
           placeholder="例: 2"
@@ -383,10 +402,10 @@ function quantityUnit(h: Holding): string {
       return "口";
     case "crypto":
       return h.ticker;
-    case "gold_coin_1oz":
+    case "gold_coin":
       return "oz";
-    case "gold_bar_20g":
-      return "本";
+    case "gold_bar":
+      return "g";
     default:
       return "株";
   }

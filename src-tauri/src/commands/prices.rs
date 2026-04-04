@@ -42,7 +42,7 @@ pub struct CategoryBreakdown {
 pub struct PortfolioResponse {
     pub total_jpy: f64,
     pub usd_jpy: f64,
-    pub gold_coin_1oz_jpy: f64,
+    pub gold_coin_oz_jpy: f64,
     pub gold_bar_gram_jpy: f64,
     pub accounts: Vec<AccountWithHoldings>,
     pub breakdown: Vec<CategoryBreakdown>,
@@ -93,27 +93,28 @@ fn calculate_value(
     price: Option<f64>,
     currency: &str,
     usd_jpy: f64,
-    gold_coin_1oz_jpy: f64,
+    gold_coin_oz_jpy: f64,
     gold_bar_gram_jpy: f64,
 ) -> HoldingWithValue {
-    // Gold: use Tanaka Kikinzoku buyback prices
-    if holding.holding_type == "gold_coin_1oz" {
-        let value = gold_coin_1oz_jpy * holding.quantity;
+    // Gold: Tanaka Kikinzoku buyback prices
+    // gold_coin: quantity is in oz, price is per oz
+    if holding.holding_type == "gold_coin" {
+        let value = gold_coin_oz_jpy * holding.quantity;
         return HoldingWithValue {
             holding: holding.clone(),
-            price: Some(gold_coin_1oz_jpy),
+            price: Some(gold_coin_oz_jpy),
             currency: "JPY".to_string(),
             value_jpy: Some(value),
             estimated_quantity: None,
         };
     }
 
-    if holding.holding_type == "gold_bar_20g" {
-        let price_per_bar = gold_bar_gram_jpy * 20.0;
-        let value = price_per_bar * holding.quantity;
+    // gold_bar: quantity is in grams, price is per gram
+    if holding.holding_type == "gold_bar" {
+        let value = gold_bar_gram_jpy * holding.quantity;
         return HoldingWithValue {
             holding: holding.clone(),
-            price: Some(price_per_bar),
+            price: Some(gold_bar_gram_jpy),
             currency: "JPY".to_string(),
             value_jpy: Some(value),
             estimated_quantity: None,
@@ -219,7 +220,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             "crypto" => {
                 crypto_symbols.insert(h.ticker.clone());
             }
-            "gold_coin_1oz" | "gold_bar_20g" => {}
+            "gold_coin" | "gold_bar" => {}
             "fund" | "dc_fund" => {
                 fund_tickers.insert(h.ticker.clone());
             }
@@ -261,7 +262,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
                     let p = crypto_prices.get(&h.ticker.to_uppercase()).copied();
                     (p, "JPY")
                 }
-                "gold_coin_1oz" | "gold_bar_20g" => (None, "JPY"),
+                "gold_coin" | "gold_bar" => (None, "JPY"),
                 "fund" | "dc_fund" => {
                     let p = fund_prices.get(&h.ticker).copied();
                     (p, "JPY")
@@ -314,7 +315,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     Ok(PortfolioResponse {
         total_jpy: grand_total,
         usd_jpy,
-        gold_coin_1oz_jpy: gold_prices.coin_1oz_jpy,
+        gold_coin_oz_jpy: gold_prices.coin_1oz_jpy,
         gold_bar_gram_jpy: gold_prices.bar_per_gram_jpy,
         accounts: accounts_with_holdings,
         breakdown,

@@ -11,8 +11,8 @@ type HoldingType =
   | "us_stock"
   | "us_etf"
   | "crypto"
-  | "gold_coin_1oz"
-  | "gold_bar_20g"
+  | "gold_coin"
+  | "gold_bar"
   | "dc_fund";
 
 interface Account {
@@ -62,7 +62,7 @@ interface CategoryBreakdown {
 interface PortfolioData {
   total_jpy: number;
   usd_jpy: number;
-  gold_coin_1oz_jpy: number;
+  gold_coin_oz_jpy: number;
   gold_bar_gram_jpy: number;
   accounts: AccountWithHoldings[];
   breakdown: CategoryBreakdown[];

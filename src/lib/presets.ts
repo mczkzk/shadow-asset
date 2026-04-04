@@ -70,9 +70,7 @@ export const HOLDING_PRESETS: HoldingPreset[] = [
   { ticker: "BTC", name: "ビットコイン", holdingType: "crypto" },
   { ticker: "ETH", name: "イーサリアム", holdingType: "crypto" },
   { ticker: "BCH", name: "ビットコインキャッシュ", holdingType: "crypto" },
-  // ゴールド
-  { ticker: "GOLD_COIN_1OZ", name: "金貨 1oz", holdingType: "gold_coin_1oz" },
-  { ticker: "GOLD_BAR_20G", name: "金地金 20g", holdingType: "gold_bar_20g" },
+  // ゴールド (GoldHoldingForm handles these directly)
   // DC
   { ticker: "9I312179", name: "楽天・全世界株式インデックス(楽天DC)", holdingType: "dc_fund" },
   { ticker: "9I311198", name: "楽天・全米株式インデックス(楽天DC)", holdingType: "dc_fund" },
