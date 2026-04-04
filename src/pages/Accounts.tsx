@@ -21,7 +21,7 @@ const ALLOWED_HOLDING_TYPES: Record<AccountType, HoldingType[]> = {
   tokutei: ["fund", "us_stock", "us_etf"],
   crypto: ["crypto"],
   gold: ["gold_coin_1oz", "gold_coin_half_oz", "gold_coin_quarter_oz", "gold_coin_tenth_oz", "gold_bar_1kg", "gold_bar_500g", "gold_bar_100g", "gold_bar_50g", "gold_bar_20g", "gold_bar_10g", "gold_bar_5g"],
-  dc: ["dc_fund"],
+  dc: ["fund", "dc_fund"],
 };
 
 const HOLDING_TYPE_LABELS: Record<HoldingType, string> = {
@@ -346,7 +346,7 @@ function HoldingForm({
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
           />
         </div>
-        {allowedTypes.length > 1 && (
+        {allowedTypes.length > 1 && accountType !== "ideco" && accountType !== "dc" && (
           <div>
             <label className="block text-xs text-zinc-500">種類</label>
             <select
