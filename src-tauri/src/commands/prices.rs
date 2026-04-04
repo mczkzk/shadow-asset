@@ -60,6 +60,33 @@ fn account_color(account_type: &str) -> &'static str {
     }
 }
 
+fn gold_coin_oz(holding_type: &str) -> Option<f64> {
+    match holding_type {
+        "gold_coin_1oz" => Some(1.0),
+        "gold_coin_half_oz" => Some(0.5),
+        "gold_coin_quarter_oz" => Some(0.25),
+        "gold_coin_tenth_oz" => Some(0.1),
+        _ => None,
+    }
+}
+
+fn gold_bar_grams(holding_type: &str) -> Option<f64> {
+    match holding_type {
+        "gold_bar_5g" => Some(5.0),
+        "gold_bar_10g" => Some(10.0),
+        "gold_bar_20g" => Some(20.0),
+        "gold_bar_50g" => Some(50.0),
+        "gold_bar_100g" => Some(100.0),
+        "gold_bar_500g" => Some(500.0),
+        "gold_bar_1kg" => Some(1000.0),
+        _ => None,
+    }
+}
+
+fn is_gold(holding_type: &str) -> bool {
+    gold_coin_oz(holding_type).is_some() || gold_bar_grams(holding_type).is_some()
+}
+
 fn estimate_quantity(holding: &Holding, current_price: f64) -> f64 {
     let as_of = match &holding.as_of {
         Some(d) if !d.is_empty() => d,
@@ -97,24 +124,25 @@ fn calculate_value(
     gold_bar_gram_jpy: f64,
 ) -> HoldingWithValue {
     // Gold: Tanaka Kikinzoku buyback prices
-    // gold_coin: quantity is in oz, price is per oz
-    if holding.holding_type == "gold_coin" {
-        let value = gold_coin_oz_jpy * holding.quantity;
+    // holding_type encodes size, quantity = number of items
+    if let Some(oz) = gold_coin_oz(&holding.holding_type) {
+        let price_per_item = gold_coin_oz_jpy * oz;
+        let value = price_per_item * holding.quantity;
         return HoldingWithValue {
             holding: holding.clone(),
-            price: Some(gold_coin_oz_jpy),
+            price: Some(price_per_item),
             currency: "JPY".to_string(),
             value_jpy: Some(value),
             estimated_quantity: None,
         };
     }
 
-    // gold_bar: quantity is in grams, price is per gram
-    if holding.holding_type == "gold_bar" {
-        let value = gold_bar_gram_jpy * holding.quantity;
+    if let Some(grams) = gold_bar_grams(&holding.holding_type) {
+        let price_per_item = gold_bar_gram_jpy * grams;
+        let value = price_per_item * holding.quantity;
         return HoldingWithValue {
             holding: holding.clone(),
-            price: Some(gold_bar_gram_jpy),
+            price: Some(price_per_item),
             currency: "JPY".to_string(),
             value_jpy: Some(value),
             estimated_quantity: None,
@@ -216,11 +244,13 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     let mut fund_tickers: HashSet<String> = HashSet::new();
 
     for h in &all_holdings {
+        if is_gold(&h.holding_type) {
+            continue;
+        }
         match h.holding_type.as_str() {
             "crypto" => {
                 crypto_symbols.insert(h.ticker.clone());
             }
-            "gold_coin" | "gold_bar" => {}
             "fund" | "dc_fund" => {
                 fund_tickers.insert(h.ticker.clone());
             }
@@ -262,7 +292,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
                     let p = crypto_prices.get(&h.ticker.to_uppercase()).copied();
                     (p, "JPY")
                 }
-                "gold_coin" | "gold_bar" => (None, "JPY"),
+                t if is_gold(t) => (None, "JPY"),
                 "fund" | "dc_fund" => {
                     let p = fund_prices.get(&h.ticker).copied();
                     (p, "JPY")

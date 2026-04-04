@@ -11,8 +11,17 @@ type HoldingType =
   | "us_stock"
   | "us_etf"
   | "crypto"
-  | "gold_coin"
-  | "gold_bar"
+  | "gold_coin_1oz"
+  | "gold_coin_half_oz"
+  | "gold_coin_quarter_oz"
+  | "gold_coin_tenth_oz"
+  | "gold_bar_5g"
+  | "gold_bar_10g"
+  | "gold_bar_20g"
+  | "gold_bar_50g"
+  | "gold_bar_100g"
+  | "gold_bar_500g"
+  | "gold_bar_1kg"
   | "dc_fund";
 
 interface Account {

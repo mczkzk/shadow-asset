@@ -39,8 +39,17 @@ function groupHoldings(
       case "crypto":
         key = "crypto";
         break;
-      case "gold_coin":
-      case "gold_bar":
+      case "gold_coin_1oz":
+      case "gold_coin_half_oz":
+      case "gold_coin_quarter_oz":
+      case "gold_coin_tenth_oz":
+      case "gold_bar_5g":
+      case "gold_bar_10g":
+      case "gold_bar_20g":
+      case "gold_bar_50g":
+      case "gold_bar_100g":
+      case "gold_bar_500g":
+      case "gold_bar_1kg":
         key = "gold";
         break;
       default:

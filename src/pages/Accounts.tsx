@@ -20,7 +20,7 @@ const ALLOWED_HOLDING_TYPES: Record<AccountType, HoldingType[]> = {
   ideco: ["fund"],
   tokutei: ["fund", "us_stock", "us_etf"],
   crypto: ["crypto"],
-  gold: ["gold_coin", "gold_bar"],
+  gold: ["gold_coin_1oz", "gold_coin_half_oz", "gold_coin_quarter_oz", "gold_coin_tenth_oz", "gold_bar_1kg", "gold_bar_500g", "gold_bar_100g", "gold_bar_50g", "gold_bar_20g", "gold_bar_10g", "gold_bar_5g"],
   dc: ["dc_fund"],
 };
 
@@ -29,8 +29,17 @@ const HOLDING_TYPE_LABELS: Record<HoldingType, string> = {
   us_stock: "米国株",
   us_etf: "米国ETF",
   crypto: "仮想通貨",
-  gold_coin: "金貨",
-  gold_bar: "金地金",
+  gold_coin_1oz: "金貨 1oz",
+  gold_coin_half_oz: "金貨 1/2oz",
+  gold_coin_quarter_oz: "金貨 1/4oz",
+  gold_coin_tenth_oz: "金貨 1/10oz",
+  gold_bar_1kg: "金地金 1kg",
+  gold_bar_500g: "金地金 500g",
+  gold_bar_100g: "金地金 100g",
+  gold_bar_50g: "金地金 50g",
+  gold_bar_20g: "金地金 20g",
+  gold_bar_10g: "金地金 10g",
+  gold_bar_5g: "金地金 5g",
   dc_fund: "DC年金ファンド",
 };
 
@@ -113,19 +122,19 @@ function AccountForm({
   );
 }
 
-// Gold presets: coin sizes in oz, bar sizes in grams
-const GOLD_PRESETS = [
-  { label: "金貨 1oz", holdingType: "gold_coin" as const, size: 1, unit: "oz" },
-  { label: "金貨 1/2oz", holdingType: "gold_coin" as const, size: 0.5, unit: "oz" },
-  { label: "金貨 1/4oz", holdingType: "gold_coin" as const, size: 0.25, unit: "oz" },
-  { label: "金貨 1/10oz", holdingType: "gold_coin" as const, size: 0.1, unit: "oz" },
-  { label: "金地金 1kg", holdingType: "gold_bar" as const, size: 1000, unit: "g" },
-  { label: "金地金 500g", holdingType: "gold_bar" as const, size: 500, unit: "g" },
-  { label: "金地金 100g", holdingType: "gold_bar" as const, size: 100, unit: "g" },
-  { label: "金地金 50g", holdingType: "gold_bar" as const, size: 50, unit: "g" },
-  { label: "金地金 20g", holdingType: "gold_bar" as const, size: 20, unit: "g" },
-  { label: "金地金 10g", holdingType: "gold_bar" as const, size: 10, unit: "g" },
-  { label: "金地金 5g", holdingType: "gold_bar" as const, size: 5, unit: "g" },
+// Gold: holding_type encodes both category and size. quantity = number of items.
+const GOLD_PRESETS: { label: string; holdingType: HoldingType }[] = [
+  { label: "金貨 1oz", holdingType: "gold_coin_1oz" },
+  { label: "金貨 1/2oz", holdingType: "gold_coin_half_oz" },
+  { label: "金貨 1/4oz", holdingType: "gold_coin_quarter_oz" },
+  { label: "金貨 1/10oz", holdingType: "gold_coin_tenth_oz" },
+  { label: "金地金 1kg", holdingType: "gold_bar_1kg" },
+  { label: "金地金 500g", holdingType: "gold_bar_500g" },
+  { label: "金地金 100g", holdingType: "gold_bar_100g" },
+  { label: "金地金 50g", holdingType: "gold_bar_50g" },
+  { label: "金地金 20g", holdingType: "gold_bar_20g" },
+  { label: "金地金 10g", holdingType: "gold_bar_10g" },
+  { label: "金地金 5g", holdingType: "gold_bar_5g" },
 ];
 
 function GoldHoldingForm({
@@ -145,15 +154,12 @@ function GoldHoldingForm({
     e.preventDefault();
     if (!quantity) return;
     setError(null);
-    // quantity = number of coins/bars. Store actual oz/g as quantity for calculation.
-    const count = parseFloat(quantity);
-    const totalSize = preset.size * count;
     try {
       await api.createHolding({
         account_id: accountId,
-        ticker: `GOLD_${preset.holdingType === "gold_coin" ? "COIN" : "BAR"}`,
-        name: `${preset.label} x${count}`,
-        quantity: totalSize, // oz for coins, g for bars
+        ticker: "GOLD",
+        name: preset.label,
+        quantity: parseFloat(quantity), // number of coins/bars
         holding_type: preset.holdingType,
         as_of: null,
         monthly_amount: null,
@@ -402,10 +408,19 @@ function quantityUnit(h: Holding): string {
       return "口";
     case "crypto":
       return h.ticker;
-    case "gold_coin":
-      return "oz";
-    case "gold_bar":
-      return "g";
+    case "gold_coin_1oz":
+    case "gold_coin_half_oz":
+    case "gold_coin_quarter_oz":
+    case "gold_coin_tenth_oz":
+      return "枚";
+    case "gold_bar_5g":
+    case "gold_bar_10g":
+    case "gold_bar_20g":
+    case "gold_bar_50g":
+    case "gold_bar_100g":
+    case "gold_bar_500g":
+    case "gold_bar_1kg":
+      return "本";
     default:
       return "株";
   }
