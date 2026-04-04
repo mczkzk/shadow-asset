@@ -230,7 +230,18 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         let conn = db.as_ref().ok_or("database not initialized")?;
 
         let mut stmt = conn
-            .prepare("SELECT id, name, type, sort_order FROM accounts ORDER BY sort_order, id")
+            .prepare(
+                "SELECT id, name, type, sort_order FROM accounts ORDER BY
+                 CASE type
+                   WHEN 'nisa' THEN 1
+                   WHEN 'ideco' THEN 2
+                   WHEN 'tokutei' THEN 3
+                   WHEN 'dc' THEN 4
+                   WHEN 'crypto' THEN 5
+                   WHEN 'gold' THEN 6
+                   ELSE 7
+                 END, name"
+            )
             .map_err(|e| e.to_string())?;
         let accounts: Vec<Account> = stmt
             .query_map([], |row| {
