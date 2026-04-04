@@ -18,11 +18,23 @@ Tauriデスクトップアプリ (.app/.dmg)。ワンクリックで起動、ロ
 - **App Framework**: Tauri v2 (Rust + WebView)
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
 - **Database**: SQLite via rusqlite (Rust側で管理)
-- **Price Data**: Rust HTTP client (reqwest) で外部API呼び出し
-  - Yahoo Finance (US stocks/ETFs, USD/JPY)
-  - Yahoo Finance JP + Rakuten SEC fallback (JP funds/DC funds, ISIN対応)
-  - 田中貴金属 (gold buyback price, fallback: gold-api.com spot price)
-  - CoinGecko (crypto)
+- **Price Data**: Rust HTTP client (reqwest, timeout 10s) で外部API呼び出し。全て認証不要。
+
+### 外部API一覧
+
+| API | 種別 | エンドポイント | 対象資産 |
+|-----|------|---------------|---------|
+| Yahoo Finance v8 | REST/JSON | `query2.finance.yahoo.com/v8/finance/chart/{ticker}` | 米国株/ETF, USD/JPY為替 |
+| Yahoo ファイナンス JP | HTMLスクレイピング | `finance.yahoo.co.jp/quote/{ticker}` | 日本の投資信託 |
+| 楽天証券 | HTMLスクレイピング | `rakuten-sec.co.jp/web/fund/detail/?ID={ISIN}` | DC/iDeCo投信 (ISIN直接指定), 一般投信のフォールバック |
+| 田中貴金属 | HTMLスクレイピング | `gold.tanaka.co.jp/commodity/souba/` | 金地金/金貨の買取価格 |
+| Gold API | REST/JSON | `api.gold-api.com/price/XAU/JPY` | 金スポット価格 (田中失敗時のフォールバック) |
+| CoinGecko v3 | REST/JSON | `api.coingecko.com/api/v3/simple/price` | 暗号資産 (BTC, ETH, BCH) |
+
+- **フォールバック戦略**: 金(田中貴金属 → Gold API)
+- **投信の価格取得ルート**: 一般投信(SBI等)はYahoo JPがプライマリ。DC/iDeCo銘柄はISINコードで登録されておりYahoo JPにマッチしないため、常に楽天証券から取得
+- **HTMLスクレイピング系**: User-Agentヘッダでブラウザを偽装。サイト仕様変更で壊れるリスクあり
+- **価格バリデーション**: 各ソースで妥当な範囲チェックあり(異常値の取り込み防止)
 
 ## Asset Categories
 
