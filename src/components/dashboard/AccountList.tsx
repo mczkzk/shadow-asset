@@ -92,7 +92,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
         {h.price != null && (
           <p className="text-xs text-zinc-400">
             {h.holding_type.startsWith("gold_")
-              ? `スポット @${formatNumber(h.price, 0)}円`
+              ? `田中買取 @${formatNumber(h.price, 0)}円`
               : `@${h.currency === "USD" ? "$" : ""}${formatNumber(h.price, 2)}`}
           </p>
         )}

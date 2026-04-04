@@ -62,7 +62,8 @@ interface CategoryBreakdown {
 interface PortfolioData {
   total_jpy: number;
   usd_jpy: number;
-  gold_usd_oz: number;
+  gold_coin_1oz_jpy: number;
+  gold_bar_gram_jpy: number;
   accounts: AccountWithHoldings[];
   breakdown: CategoryBreakdown[];
 }

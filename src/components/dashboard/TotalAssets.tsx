@@ -1,15 +1,15 @@
-import { formatJpy } from "@/lib/format";
+import { formatJpy, formatNumber } from "@/lib/format";
 
 interface TotalAssetsProps {
   totalJpy: number;
   usdJpy: number;
-  goldUsdOz: number;
+  goldCoin1ozJpy: number;
 }
 
 export default function TotalAssets({
   totalJpy,
   usdJpy,
-  goldUsdOz,
+  goldCoin1ozJpy,
 }: TotalAssetsProps) {
   return (
     <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white shadow-lg">
@@ -19,7 +19,7 @@ export default function TotalAssets({
       </p>
       <div className="mt-4 flex gap-6 text-xs opacity-70">
         <span>USD/JPY: {usdJpy.toFixed(2)}</span>
-        <span>Gold: ${goldUsdOz.toFixed(0)}/oz</span>
+        <span>金1oz: {formatNumber(goldCoin1ozJpy, 0)}円</span>
       </div>
     </div>
   );
