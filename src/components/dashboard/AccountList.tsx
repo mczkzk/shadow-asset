@@ -65,7 +65,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
       <div>
         <p className="font-medium text-zinc-700">{h.name}</p>
         <p className="text-xs text-zinc-400">
-          {h.ticker}
+          {!h.holding_type.startsWith("gold_") && h.ticker}
           {h.estimated_quantity != null && (
             <span className="ml-2 text-amber-500">
               推定 {formatNumber(h.estimated_quantity, 0)}
@@ -91,8 +91,9 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
         )}
         {h.price != null && (
           <p className="text-xs text-zinc-400">
-            @{h.currency === "USD" ? "$" : ""}
-            {formatNumber(h.price, 2)}
+            {h.holding_type.startsWith("gold_")
+              ? `スポット @${formatNumber(h.price, 0)}円`
+              : `@${h.currency === "USD" ? "$" : ""}${formatNumber(h.price, 2)}`}
           </p>
         )}
       </div>
