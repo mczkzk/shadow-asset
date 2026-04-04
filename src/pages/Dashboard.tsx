@@ -38,7 +38,6 @@ export default function Dashboard() {
         <TotalAssets
           totalJpy={data.total_jpy}
           usdJpy={data.usd_jpy}
-          goldCoin1ozJpy={data.gold_coin_oz_jpy}
         />
         <button
           onClick={refresh}
