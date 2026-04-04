@@ -113,6 +113,74 @@ function AccountForm({
   );
 }
 
+// Gold: just pick type and quantity
+function GoldHoldingForm({
+  accountId,
+  onCreated,
+}: {
+  accountId: number;
+  onCreated: () => void;
+}) {
+  const [holdingType, setHoldingType] = useState<"gold_coin_1oz" | "gold_bar_20g">("gold_coin_1oz");
+  const [quantity, setQuantity] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const label = holdingType === "gold_coin_1oz" ? "金貨 1oz" : "金地金 20g";
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quantity) return;
+    setError(null);
+    try {
+      await api.createHolding({
+        account_id: accountId,
+        ticker: holdingType === "gold_coin_1oz" ? "GOLD_COIN_1OZ" : "GOLD_BAR_20G",
+        name: label,
+        quantity: parseFloat(quantity),
+        holding_type: holdingType,
+        as_of: null,
+        monthly_amount: null,
+      });
+      setQuantity("");
+      onCreated();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 flex items-end gap-3 rounded-lg bg-zinc-50 p-3">
+      <div>
+        <label className="block text-xs text-zinc-500">種類</label>
+        <select
+          value={holdingType}
+          onChange={(e) => setHoldingType(e.target.value as "gold_coin_1oz" | "gold_bar_20g")}
+          className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm"
+        >
+          <option value="gold_coin_1oz">金貨 1oz</option>
+          <option value="gold_bar_20g">金地金 20g</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs text-zinc-500">数量</label>
+        <input
+          type="number"
+          step="any"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          placeholder="例: 2"
+          className="mt-1 w-24 rounded border border-zinc-300 px-2 py-1 text-sm"
+        />
+      </div>
+      <button type="submit" className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700">
+        追加
+      </button>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </form>
+  );
+}
+
+// Standard form for stocks, funds, crypto, DC
 function HoldingForm({
   accountId,
   accountType,
@@ -124,6 +192,11 @@ function HoldingForm({
 }) {
   const allowedTypes = ALLOWED_HOLDING_TYPES[accountType];
 
+  // Gold uses its own simplified form
+  if (accountType === "gold") {
+    return <GoldHoldingForm accountId={accountId} onCreated={onCreated} />;
+  }
+
   const [ticker, setTicker] = useState("");
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -132,6 +205,9 @@ function HoldingForm({
   const [monthlyAmount, setMonthlyAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Show tsumitate fields only for fund types
+  const showTsumitate = accountType === "nisa" || accountType === "ideco" || accountType === "tokutei" || accountType === "dc";
 
   // Inline suggestions based on ticker input
   const suggestions = useMemo(() => {
@@ -202,9 +278,7 @@ function HoldingForm({
             placeholder={
               accountType === "crypto"
                 ? "例: BTC"
-                : accountType === "gold"
-                  ? "自動入力"
-                  : "例: NVDA, オルカン"
+                : "例: NVDA, オルカン"
             }
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
           />
@@ -263,29 +337,33 @@ function HoldingForm({
             </select>
           </div>
         )}
-        <div>
-          <label className="block text-xs text-zinc-500">
-            確認日 (積立用)
-          </label>
-          <input
-            type="date"
-            value={asOf}
-            onChange={(e) => setAsOf(e.target.value)}
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-zinc-500">
-            月額積立 (円)
-          </label>
-          <input
-            type="number"
-            value={monthlyAmount}
-            onChange={(e) => setMonthlyAmount(e.target.value)}
-            placeholder="例: 50000"
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-          />
-        </div>
+        {showTsumitate && (
+          <>
+            <div>
+              <label className="block text-xs text-zinc-500">
+                確認日 (積立用)
+              </label>
+              <input
+                type="date"
+                value={asOf}
+                onChange={(e) => setAsOf(e.target.value)}
+                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-500">
+                月額積立 (円)
+              </label>
+              <input
+                type="number"
+                value={monthlyAmount}
+                onChange={(e) => setMonthlyAmount(e.target.value)}
+                placeholder="例: 50000"
+                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+              />
+            </div>
+          </>
+        )}
       </div>
       <button
         type="submit"
