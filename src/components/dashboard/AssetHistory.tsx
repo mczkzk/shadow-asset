@@ -33,7 +33,10 @@ export default function AssetHistory() {
       <div className="rounded-xl border border-zinc-200 bg-white p-6">
         <h2 className="text-sm font-semibold text-zinc-700">資産推移</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          2日以上のデータが蓄積されるとグラフが表示されます
+          ダッシュボードを開くたびに総資産額を記録します。
+          {data.length === 0
+            ? "本日の記録を保存しました。明日以降にグラフが表示されます。"
+            : `${data.length}日分のデータがあります。もう1日分で表示されます。`}
         </p>
       </div>
     );
