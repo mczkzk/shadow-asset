@@ -188,9 +188,15 @@ fn calculate_value(
     };
 
     let is_fund = holding.holding_type == "fund" || holding.holding_type == "dc_fund";
-    // For funds, price is per 10,000 units. Convert to per-unit for estimation.
-    let price_per_unit = if is_fund { price / 10000.0 } else { price };
-    let estimated_qty = estimate_quantity(holding, price_per_unit);
+    // Convert price to JPY per unit for tsumitate estimation (monthly_amount is always JPY)
+    let price_per_unit_jpy = if is_fund {
+        price / 10000.0 // 基準価額 is per 10,000口, already JPY
+    } else if currency == "USD" {
+        price * usd_jpy // convert USD to JPY
+    } else {
+        price
+    };
+    let estimated_qty = estimate_quantity(holding, price_per_unit_jpy);
     let is_estimated = (estimated_qty - holding.quantity).abs() > 0.001;
 
     let value_jpy = if is_fund {
@@ -517,5 +523,23 @@ mod tests {
         // value = 145,094 / 10000 × 33265 = ~482,615円
         assert!(result.value_jpy.unwrap() > 400000.0);
         assert!(result.estimated_quantity.is_some());
+    }
+
+    #[test]
+    fn us_stock_tsumitate_converts_jpy_to_usd() {
+        // NVDA: 0 shares, $177, USD/JPY=150, 月額50,000円, 2025-10-01確認
+        let h = Holding {
+            as_of: Some("2025-10-01".to_string()),
+            monthly_amount: Some(50000.0),
+            ..make_holding("us_stock", 0.0)
+        };
+        let result = calculate_value(&h, Some(177.0), "USD", 150.0, 0.0, 0.0);
+        // 6 months elapsed (Oct 2025 to Apr 2026)
+        // price_per_unit_jpy = 177 * 150 = 26,550 JPY/share
+        // additional = 6 × 50,000 / 26,550 = 11.3 shares
+        let est = result.estimated_quantity.unwrap();
+        assert!(est > 10.0 && est < 13.0, "expected ~11.3, got {}", est);
+        // value = 11.3 × $177 × 150 = ~300,015
+        assert!(result.value_jpy.unwrap() > 250000.0);
     }
 }
