@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { save, open } from "@tauri-apps/plugin-dialog";
 import type { Account, Holding, AccountType, HoldingType } from "@/lib/types";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 import { ACCOUNT_PRESETS, HOLDING_PRESETS } from "@/lib/presets";
@@ -578,12 +579,102 @@ export default function Accounts() {
     }
   };
 
+  const [exportImportError, setExportImportError] = useState<string | null>(null);
+  const [confirmImport, setConfirmImport] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    setExportImportError(null);
+    try {
+      const path = await save({
+        defaultPath: "shadow-asset-backup.json",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!path) return;
+      await api.exportData(path);
+    } catch (e) {
+      setExportImportError(`エクスポート失敗: ${e}`);
+    }
+  };
+
+  const handleImportPick = async () => {
+    setExportImportError(null);
+    try {
+      const path = await open({
+        filters: [{ name: "JSON", extensions: ["json"] }],
+        multiple: false,
+      });
+      if (!path || typeof path !== "string") return;
+      setConfirmImport(path);
+    } catch (e) {
+      setExportImportError(`ファイル選択失敗: ${e}`);
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!confirmImport) return;
+    setExportImportError(null);
+    try {
+      await api.importData(confirmImport);
+      setConfirmImport(null);
+      await refresh();
+    } catch (e) {
+      setExportImportError(`インポート失敗: ${e}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-bold text-zinc-800">保有管理</h1>
-        <p className="text-sm text-zinc-500">口座と銘柄の追加、編集、削除</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-zinc-800">保有管理</h1>
+          <p className="text-sm text-zinc-500">口座と銘柄の追加、編集、削除</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
+            エクスポート
+          </button>
+          <button
+            onClick={handleImportPick}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12M12 16.5V3" />
+            </svg>
+            インポート
+          </button>
+        </div>
       </div>
+
+      {confirmImport && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+          <span className="text-amber-800">
+            <span className="font-medium">{confirmImport.split("/").pop()}</span>
+            {" "}をインポートすると既存データが全て置き換わります。続行しますか?
+          </span>
+          <button
+            onClick={handleImportConfirm}
+            className="rounded bg-red-500 px-3 py-1 text-xs text-white hover:bg-red-600"
+          >
+            実行
+          </button>
+          <button
+            onClick={() => setConfirmImport(null)}
+            className="text-xs text-zinc-500 hover:text-zinc-700"
+          >
+            キャンセル
+          </button>
+        </div>
+      )}
+
+      {exportImportError && (
+        <p className="text-xs text-red-500">{exportImportError}</p>
+      )}
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5">
         <h2 className="mb-3 text-sm font-semibold text-zinc-700">

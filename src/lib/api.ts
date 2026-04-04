@@ -59,6 +59,15 @@ export function deleteHolding(id: number): Promise<void> {
   return invoke("delete_holding", { id });
 }
 
+// Export / Import
+export function exportData(path: string): Promise<void> {
+  return invoke("export_data", { path });
+}
+
+export function importData(path: string): Promise<void> {
+  return invoke("import_data", { path });
+}
+
 // Portfolio
 export function fetchPortfolio(): Promise<PortfolioData> {
   return invoke("fetch_portfolio");

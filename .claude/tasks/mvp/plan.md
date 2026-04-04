@@ -102,7 +102,7 @@
 - [x] Recharts によるチャート描画
 
 ### Phase 4: 仕上げ
-- [ ] アプリアイコン
+- [x] アプリアイコン
 - [x] .dmg ビルド確認
 - [x] エラーハンドリング
 
@@ -155,8 +155,8 @@ src-tauri/src/
 
 ### その他
 - 損益計算 (取得価額との比較)
-- エクスポート/インポート機能
-- アプリアイコン
+- ~~エクスポート/インポート機能~~ (実装済み: feature/export-import)
+- ~~アプリアイコン~~ (実装済み)
 
 ## spike/mvp-v1 からの知見
 - better-sqlite3, @libsql/client, Prisma v7 は全てNode.js v24で問題あり
