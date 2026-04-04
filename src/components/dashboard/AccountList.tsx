@@ -78,6 +78,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
           {h.estimated_quantity != null && (
             <span className="ml-2 text-amber-500">
               推定 {formatNumber(h.estimated_quantity, 0)}
+              {(h.holding_type === "fund" || h.holding_type === "dc_fund") && "口"}
             </span>
           )}
           {h.estimated_quantity == null && (
