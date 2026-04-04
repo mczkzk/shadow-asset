@@ -31,9 +31,6 @@ export default function App() {
       <div className="min-h-screen bg-zinc-50">
         <header className="border-b border-zinc-200 bg-white">
           <div className="mx-auto flex max-w-5xl items-center gap-2 px-6 py-3">
-            <h1 className="mr-6 text-lg font-bold text-zinc-800">
-              Shadow Asset
-            </h1>
             <NavItem to="/">ダッシュボード</NavItem>
             <NavItem to="/accounts">保有管理</NavItem>
           </div>

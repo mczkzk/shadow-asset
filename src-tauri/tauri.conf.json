@@ -14,9 +14,9 @@
       {
         "title": "Shadow Asset",
         "width": 1000,
-        "height": 700,
+        "height": 900,
         "minWidth": 800,
-        "minHeight": 600
+        "minHeight": 700
       }
     ],
     "security": {

@@ -48,18 +48,6 @@ pub struct PortfolioResponse {
     pub breakdown: Vec<CategoryBreakdown>,
 }
 
-fn account_color(account_type: &str) -> &'static str {
-    match account_type {
-        "nisa" => "#4F46E5",
-        "ideco" => "#7C3AED",
-        "tokutei" => "#2563EB",
-        "crypto" => "#D97706",
-        "gold" => "#CA8A04",
-        "dc" => "#DC2626",
-        _ => "#6B7280",
-    }
-}
-
 fn gold_coin_oz(holding_type: &str) -> Option<f64> {
     match holding_type {
         "gold_coin_1oz" => Some(1.0),
