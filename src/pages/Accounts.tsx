@@ -426,6 +426,125 @@ function quantityUnit(h: Holding): string {
   }
 }
 
+function EditableHolding({
+  holding,
+  onUpdated,
+  onDelete,
+}: {
+  holding: Holding;
+  onUpdated: () => void;
+  onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [qty, setQty] = useState(String(holding.quantity));
+  const [asOf, setAsOf] = useState(holding.as_of ?? "");
+  const [monthly, setMonthly] = useState(
+    holding.monthly_amount != null ? String(holding.monthly_amount) : ""
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    setError(null);
+    try {
+      await api.updateHolding({
+        id: holding.id,
+        ticker: holding.ticker,
+        name: holding.name,
+        quantity: parseFloat(qty),
+        holding_type: holding.holding_type,
+        as_of: asOf || null,
+        monthly_amount: monthly ? parseFloat(monthly) : null,
+      });
+      setEditing(false);
+      onUpdated();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="rounded bg-zinc-50 px-2 py-2 text-sm">
+        <div className="mb-1 font-medium text-zinc-700">
+          {holding.name}
+          <span className="ml-2 text-xs text-zinc-400">{holding.ticker}</span>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="block text-xs text-zinc-500">数量</label>
+            <input
+              type="number"
+              step="any"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="w-28 rounded border border-zinc-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-500">確認日</label>
+            <input
+              type="date"
+              value={asOf}
+              onChange={(e) => setAsOf(e.target.value)}
+              className="rounded border border-zinc-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-500">月額積立</label>
+            <input
+              type="number"
+              value={monthly}
+              onChange={(e) => setMonthly(e.target.value)}
+              placeholder="円"
+              className="w-28 rounded border border-zinc-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <button
+            onClick={handleSave}
+            className="rounded bg-indigo-600 px-3 py-1 text-xs text-white hover:bg-indigo-700"
+          >
+            保存
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            className="text-xs text-zinc-400 hover:text-zinc-600"
+          >
+            キャンセル
+          </button>
+        </div>
+        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-zinc-50">
+      <button
+        onClick={() => setEditing(true)}
+        className="text-left"
+      >
+        <span className="font-medium text-zinc-700">{holding.name}</span>
+        <span className="ml-2 text-xs text-zinc-400">{holding.ticker}</span>
+        <span className="ml-2 text-xs text-zinc-500">
+          {formatNumber(holding.quantity, holding.quantity % 1 === 0 ? 0 : 4)}{" "}
+          {quantityUnit(holding)}
+        </span>
+        {holding.monthly_amount != null && holding.monthly_amount > 0 && (
+          <span className="ml-2 text-xs text-indigo-400">
+            積立{holding.monthly_amount.toLocaleString()}円/月
+          </span>
+        )}
+      </button>
+      <button
+        onClick={onDelete}
+        className="text-xs text-red-400 hover:text-red-600"
+      >
+        削除
+      </button>
+    </div>
+  );
+}
+
 export default function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -562,37 +681,12 @@ export default function Accounts() {
                 <div className="border-t border-zinc-100 px-5 py-3">
                   <div className="space-y-1">
                     {accountHoldings.map((h) => (
-                      <div
+                      <EditableHolding
                         key={h.id}
-                        className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-zinc-50"
-                      >
-                        <div>
-                          <span className="font-medium text-zinc-700">
-                            {h.name}
-                          </span>
-                          <span className="ml-2 text-xs text-zinc-400">
-                            {h.ticker}
-                          </span>
-                          <span className="ml-2 text-xs text-zinc-500">
-                            {formatNumber(
-                              h.quantity,
-                              h.quantity % 1 === 0 ? 0 : 4
-                            )}{" "}
-                            {quantityUnit(h)}
-                          </span>
-                          {h.monthly_amount != null && h.monthly_amount > 0 && (
-                            <span className="ml-2 text-xs text-indigo-400">
-                              積立{h.monthly_amount.toLocaleString()}円/月
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleDeleteHolding(h.id)}
-                          className="text-xs text-red-400 hover:text-red-600"
-                        >
-                          削除
-                        </button>
-                      </div>
+                        holding={h}
+                        onUpdated={refresh}
+                        onDelete={() => handleDeleteHolding(h.id)}
+                      />
                     ))}
                   </div>
                   <HoldingForm
