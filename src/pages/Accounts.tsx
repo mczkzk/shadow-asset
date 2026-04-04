@@ -500,7 +500,7 @@ function EditableHolding({
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="text-xs text-zinc-400 hover:text-zinc-600"
+            className="py-1 text-xs text-zinc-400 hover:text-zinc-600"
           >
             キャンセル
           </button>
