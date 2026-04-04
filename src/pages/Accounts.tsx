@@ -490,7 +490,7 @@ function EditableHolding({
             />
           </div>
           <div>
-            <label className="block text-xs text-zinc-500">月額積立</label>
+            <label className="block text-xs text-zinc-500">月額積立 (円)</label>
             <input
               type="number"
               value={monthly}
