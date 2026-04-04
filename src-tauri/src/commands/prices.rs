@@ -109,13 +109,16 @@ fn asset_class_color(class_name: &str) -> &'static str {
     }
 }
 
-fn estimate_quantity(holding: &Holding, current_price: f64) -> f64 {
+/// Estimate current quantity based on monthly contributions since as_of date.
+/// `price_per_unit` must be the cost to buy ONE unit of the holding.
+/// For Japanese funds (基準価額 per 10,000口), caller must pass price/10000.
+fn estimate_quantity(holding: &Holding, price_per_unit: f64) -> f64 {
     let as_of = match &holding.as_of {
         Some(d) if !d.is_empty() => d,
         _ => return holding.quantity,
     };
     let monthly = match holding.monthly_amount {
-        Some(m) if m > 0.0 && current_price > 0.0 => m,
+        Some(m) if m > 0.0 && price_per_unit > 0.0 => m,
         _ => return holding.quantity,
     };
 
@@ -133,7 +136,7 @@ fn estimate_quantity(holding: &Holding, current_price: f64) -> f64 {
         return holding.quantity;
     }
 
-    let additional = (months_elapsed as f64 * monthly) / current_price;
+    let additional = (months_elapsed as f64 * monthly) / price_per_unit;
     holding.quantity + additional
 }
 
@@ -184,11 +187,13 @@ fn calculate_value(
         }
     };
 
-    let estimated_qty = estimate_quantity(holding, price);
+    let is_fund = holding.holding_type == "fund" || holding.holding_type == "dc_fund";
+    // For funds, price is per 10,000 units. Convert to per-unit for estimation.
+    let price_per_unit = if is_fund { price / 10000.0 } else { price };
+    let estimated_qty = estimate_quantity(holding, price_per_unit);
     let is_estimated = (estimated_qty - holding.quantity).abs() > 0.001;
 
-    let value_jpy = if holding.holding_type == "fund" || holding.holding_type == "dc_fund" {
-        // Japanese funds: price is per 10,000 units
+    let value_jpy = if is_fund {
         (estimated_qty / 10000.0) * price
     } else if currency == "USD" {
         estimated_qty * price * usd_jpy
@@ -477,7 +482,8 @@ mod tests {
     #[test]
     fn estimate_quantity_no_tsumitate() {
         let h = make_holding("fund", 10000.0);
-        assert_eq!(estimate_quantity(&h, 25000.0), 10000.0);
+        // price_per_unit for fund: 基準価額 25000 / 10000 = 2.5
+        assert_eq!(estimate_quantity(&h, 2.5), 10000.0);
     }
 
     #[test]
@@ -485,12 +491,31 @@ mod tests {
         let h = Holding {
             as_of: Some("2025-01-01".to_string()),
             monthly_amount: Some(50000.0),
-            ..make_holding("fund", 10000.0)
+            ..make_holding("fund", 100000.0)
         };
-        let result = estimate_quantity(&h, 25000.0);
-        // Months from 2025-01 to now (2026-04) = ~15 months
-        // Additional = 15 × 50000 / 25000 = 30
-        // Total = 10000 + 30 = 10030
-        assert!(result > 10000.0);
+        // price_per_unit for fund: 基準価額 33265 / 10000 = 3.3265
+        let result = estimate_quantity(&h, 3.3265);
+        // Months from 2025-01 to 2026-04 = 15 months
+        // Additional = 15 × 50000 / 3.3265 = 225,518口
+        // Total = 100,000 + 225,518 = 325,518
+        assert!(result > 300000.0);
+    }
+
+    #[test]
+    fn fund_with_tsumitate_value() {
+        // 100,000口, 基準価額 33,265, 月額50,000円, 2026-01-01確認
+        let h = Holding {
+            as_of: Some("2026-01-01".to_string()),
+            monthly_amount: Some(50000.0),
+            ..make_holding("fund", 100000.0)
+        };
+        let result = calculate_value(&h, Some(33265.0), "JPY", 150.0, 0.0, 0.0);
+        // 3 months elapsed (Jan to Apr 2026)
+        // per_unit = 33265/10000 = 3.3265
+        // additional = 3 × 50000 / 3.3265 = 45,094口
+        // estimated = 100,000 + 45,094 = 145,094口
+        // value = 145,094 / 10000 × 33265 = ~482,615円
+        assert!(result.value_jpy.unwrap() > 400000.0);
+        assert!(result.estimated_quantity.is_some());
     }
 }
