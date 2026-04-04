@@ -32,9 +32,7 @@ export const ACCOUNT_PRESETS: AccountPreset[] = [
   { name: "GMOコイン", type: "crypto" },
   { name: "bitbank", type: "crypto" },
   // ゴールド
-  { name: "ゴールド現物 (自宅保管)", type: "gold" },
-  { name: "田中貴金属", type: "gold" },
-  { name: "三菱マテリアル", type: "gold" },
+  { name: "ゴールド現物", type: "gold" },
   // DC
   { name: "楽天証券 DC", type: "dc" },
   { name: "SBI証券 DC", type: "dc" },
