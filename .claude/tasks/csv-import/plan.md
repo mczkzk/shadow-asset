@@ -26,8 +26,8 @@ Import fund holdings from broker CSV files to automatically update quantities in
   - Name matching with substring fallback
   - Account matching by broker name + account type
 - **Frontend**: 
-  - `src/lib/api.ts`: `importCsvHoldings(path, broker)` 
-  - `src/pages/Accounts.tsx`: Dropdown button (CSV取込) with broker selection, result display
+  - `src/lib/api.ts`: `previewCsvImport(path, broker)`, `applyCsvImport(updates)`
+  - `src/pages/Accounts.tsx`: Dropdown button (CSV取込) with broker selection, preview/confirm flow
 
 ## Matching Logic
 1. Parse CSV, aggregate quantities per fund per account section

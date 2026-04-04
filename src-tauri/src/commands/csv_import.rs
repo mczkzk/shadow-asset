@@ -239,7 +239,7 @@ fn account_matches(account_name: &str, account_type: &str, broker: &str, section
 
     match section {
         "tokutei" => account_type == "tokutei",
-        "nisa" | "nisa_seichou" | "nisa_tsumitate" | "nisa_old" => account_type == "nisa",
+        "nisa" => account_type == "nisa",
         _ => false,
     }
 }
