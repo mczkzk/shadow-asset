@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="src-tauri/icons/icon.png" width="128" alt="Shadow Asset">
+</p>
+
 # Shadow Asset
 
 プライバシーファーストの資産シミュレーター。外部金融サービスに接続せず、「公開市場価格 x 自分で入力した数量」だけで資産総額をリアルタイム計算するデスクトップアプリ。
 
 ## 特徴
 
-- **数量のみ保存、金額はリアルタイム計算** (Yahoo Finance, CoinGecko, gold-api等から取得)
+- **数量のみ保存、金額はリアルタイム計算** (Yahoo Finance, CoinGecko, 田中貴金属等から取得)
 - **完全ローカル** (クラウド不要、アカウント不要)
 - **口座 + 銘柄の2層構造** (NISA, iDeCo, 特定口座, 米国株, 仮想通貨, ゴールド, DC)
 - **積立シミュレーション** (確認日 + 月額から現在の口数を推定)

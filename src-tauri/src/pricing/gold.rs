@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Clone)]
 pub struct GoldPrices {
@@ -6,28 +6,68 @@ pub struct GoldPrices {
     pub bar_per_gram_jpy: f64,
 }
 
-/// Fetch gold buyback prices from Tanaka Kikinzoku (田中貴金属 店頭買取価格 税込)
+const TROY_OZ_GRAMS: f64 = 31.1035;
+
+#[derive(Deserialize)]
+struct GoldApiResponse {
+    price: f64,
+}
+
+/// Fetch gold buyback prices from Tanaka Kikinzoku, fallback to gold-api.com
 pub async fn fetch_gold_prices() -> GoldPrices {
-    let result = async {
-        let client = reqwest::Client::new();
-        let html = client
-            .get("https://gold.tanaka.co.jp/commodity/souba/")
-            .header(
-                "User-Agent",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-            )
-            .send()
-            .await?
-            .text()
-            .await?;
+    let client = reqwest::Client::new();
 
-        Ok::<GoldPrices, reqwest::Error>(parse_tanaka_prices(&html))
+    if let Some(prices) = fetch_from_tanaka(&client).await {
+        return prices;
     }
-    .await;
 
-    result.unwrap_or(GoldPrices {
+    if let Some(prices) = fetch_from_gold_api(&client).await {
+        return prices;
+    }
+
+    GoldPrices {
         coin_1oz_jpy: 800000.0,
         bar_per_gram_jpy: 25000.0,
+    }
+}
+
+async fn fetch_from_tanaka(client: &reqwest::Client) -> Option<GoldPrices> {
+    let html = client
+        .get("https://gold.tanaka.co.jp/commodity/souba/")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        )
+        .send()
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+
+    let prices = parse_tanaka_prices(&html);
+    if prices.bar_per_gram_jpy > 0.0 && prices.coin_1oz_jpy > 0.0 {
+        Some(prices)
+    } else {
+        None
+    }
+}
+
+/// Fallback: gold-api.com (spot price per troy oz in JPY, no API key required)
+async fn fetch_from_gold_api(client: &reqwest::Client) -> Option<GoldPrices> {
+    let resp: GoldApiResponse = client
+        .get("https://api.gold-api.com/price/XAU/JPY")
+        .send()
+        .await
+        .ok()?
+        .json()
+        .await
+        .ok()?;
+
+    let per_gram = resp.price / TROY_OZ_GRAMS;
+    Some(GoldPrices {
+        coin_1oz_jpy: resp.price,
+        bar_per_gram_jpy: per_gram,
     })
 }
 
