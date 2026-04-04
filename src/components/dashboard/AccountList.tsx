@@ -75,20 +75,21 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
         <p className="font-medium text-zinc-700">{h.name}</p>
         <p className="text-xs text-zinc-400">
           {!h.holding_type.startsWith("gold_") && h.ticker}
-          {h.estimated_quantity != null && (
-            <span className="ml-2 text-amber-500">
-              推定 {formatNumber(h.estimated_quantity, 0)}
-              {(h.holding_type === "fund" || h.holding_type === "dc_fund") && "口"}
-            </span>
-          )}
-          {h.estimated_quantity == null && (
+          {h.estimated_quantity != null ? (
+            <>
+              <span className="ml-2 text-amber-500">
+                {h.as_of}時点 {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 4)}
+                {(h.holding_type === "fund" || h.holding_type === "dc_fund") ? "口" : "株"}
+                {" "}→ 推定 {formatNumber(h.estimated_quantity, 0)}
+                {(h.holding_type === "fund" || h.holding_type === "dc_fund") ? "口" : "株"}
+              </span>
+              <span className="ml-2 text-indigo-400">
+                積立 {formatJpy(h.monthly_amount!)}/月
+              </span>
+            </>
+          ) : (
             <span className="ml-2">
               {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 8)}
-            </span>
-          )}
-          {h.monthly_amount != null && h.monthly_amount > 0 && (
-            <span className="ml-2 text-indigo-400">
-              積立 {formatJpy(h.monthly_amount)}/月
             </span>
           )}
         </p>
