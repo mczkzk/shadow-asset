@@ -5,7 +5,7 @@
 
 ## 要件
 - **保存するのは数量のみ、金額は全てリアルタイム計算**
-- 口座(NISA, iDeCo, 特定口座, 米国株, 仮想通貨, ゴールド, DC) + 銘柄の2層構造
+- 口座(NISA, iDeCo, 特定口座, 仮想通貨, ゴールド, DC) + 銘柄の2層構造
 - 積立銘柄は as_of(確認日) + monthly_amount(月額) で現在の口数を推定
 - 対象: 投信, 米国株/ETF, 仮想通貨(BTC/ETH/BCH), ゴールド現物(金貨1oz, 金地金20g), DC年金
 - UIは日本語、マネーフォワード風ダッシュボード
@@ -32,7 +32,7 @@
 |--------|------|------|
 | id | INTEGER PK | |
 | name | TEXT | 口座名 (例: "つみたてNISA") |
-| type | TEXT | nisa/ideco/tokutei/us_stock/crypto/gold/dc |
+| type | TEXT | nisa/ideco/tokutei/crypto/gold/dc |
 | sort_order | INTEGER | 表示順 |
 
 ### holdings テーブル
