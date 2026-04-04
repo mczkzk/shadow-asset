@@ -45,12 +45,9 @@ Rust側のコード変更は自動リコンパイル後に反映されます。
 ## 本番ビルド
 
 ```bash
-npm run tauri build
+npm run tauri build          # DMG + .app
+npm run install-app          # ビルド + /Applications にインストール + アドホック署名
 ```
-
-成果物:
-- `src-tauri/target/release/bundle/macos/Shadow Asset.app`
-- `src-tauri/target/release/bundle/dmg/Shadow Asset_0.1.0_aarch64.dmg`
 
 ## プロジェクト構造
 

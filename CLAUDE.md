@@ -5,6 +5,13 @@
 
 Update these files BEFORE moving to the next task. They are the persistent record that survives context resets.
 
+## Build
+
+**Build + install to /Applications + ad-hoc sign:**
+```bash
+npm run install-app
+```
+
 ## Personal Data Policy -- DO NOT REMOVE
 - **銘柄名・ティッカーの記載: OK** (公開情報)
 - **保有数量・口数・金額の記載: 絶対禁止** (個人資産を特定できる情報)

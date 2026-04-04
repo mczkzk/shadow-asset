@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "install-app": "tauri build --bundles app && rm -rf '/Applications/Shadow Asset.app' && cp -R 'src-tauri/target/release/bundle/macos/Shadow Asset.app' /Applications/ && codesign --force --deep -s - '/Applications/Shadow Asset.app'"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
