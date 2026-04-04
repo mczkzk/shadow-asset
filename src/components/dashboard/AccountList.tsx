@@ -1,6 +1,14 @@
 import { formatJpy, formatNumber } from "@/lib/format";
 import type { AccountWithHoldings, HoldingWithValue } from "@/lib/types";
 
+function unitLabel(holdingType: string): string {
+  if (holdingType === "fund" || holdingType === "dc_fund") return "口";
+  if (holdingType === "crypto") return "";
+  if (holdingType.startsWith("gold_coin")) return "枚";
+  if (holdingType.startsWith("gold_bar")) return "本";
+  return "株";
+}
+
 interface AccountListProps {
   accounts: AccountWithHoldings[];
 }
@@ -78,10 +86,8 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
           {h.estimated_quantity != null ? (
             <>
               <span className="ml-2 text-amber-500">
-                {h.as_of}時点 {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 4)}
-                {(h.holding_type === "fund" || h.holding_type === "dc_fund") ? "口" : "株"}
-                {" "}→ 推定 {formatNumber(h.estimated_quantity, 0)}
-                {(h.holding_type === "fund" || h.holding_type === "dc_fund") ? "口" : "株"}
+                {h.as_of}時点 {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 4)}{unitLabel(h.holding_type)}
+                {" "}→ 推定 {formatNumber(h.estimated_quantity, 0)}{unitLabel(h.holding_type)}
               </span>
               <span className="ml-2 text-indigo-400">
                 積立 {formatJpy(h.monthly_amount!)}/月
@@ -89,7 +95,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
             </>
           ) : (
             <span className="ml-2">
-              {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 8)}
+              {formatNumber(h.quantity, h.quantity % 1 === 0 ? 0 : 8)}{unitLabel(h.holding_type)}
             </span>
           )}
         </p>
