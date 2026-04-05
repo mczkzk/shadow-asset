@@ -29,13 +29,14 @@ function usePortfolio() {
   return { data, isLoading, error, refresh: load, refreshCount };
 }
 
-function useSnapshots(days = 90, refreshCount = 0) {
+function useSnapshots(days?: number, refreshCount = 0) {
   const [snapshots, setSnapshots] = useState<Snapshot[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const prevCount = useRef(refreshCount);
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
-    // Skip the re-fetch triggered by initial load's refreshCount change
+    // Skip the 0→1 refreshCount bump from initial fetchPortfolio (reloadCount uses a separate counter)
     if (prevCount.current === 0 && refreshCount === 1) {
       prevCount.current = refreshCount;
       return;
@@ -46,9 +47,11 @@ function useSnapshots(days = 90, refreshCount = 0) {
     getSnapshots(days)
       .then(setSnapshots)
       .finally(() => setIsLoading(false));
-  }, [days, refreshCount]);
+  }, [days, refreshCount, reloadCount]);
 
-  return { snapshots, isLoading };
+  const reload = useCallback(() => setReloadCount((c) => c + 1), []);
+
+  return { snapshots, isLoading, reload };
 }
 
 export { usePortfolio, useSnapshots };

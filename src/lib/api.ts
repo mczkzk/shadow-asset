@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, Holding, PortfolioData, Snapshot } from "./types";
+import type { Account, Holding, PortfolioData, Snapshot, MfImportPreview, MfPreviewRow, MfImportResult } from "./types";
 
 // Accounts
 export function getAccounts(): Promise<Account[]> {
@@ -104,4 +104,13 @@ export function fetchPortfolio(): Promise<PortfolioData> {
 // Snapshots
 export function getSnapshots(days?: number): Promise<Snapshot[]> {
   return invoke("get_snapshots", { days });
+}
+
+// MoneyForward CSV Import
+export function previewMfImport(path: string): Promise<MfImportPreview> {
+  return invoke("preview_mf_import", { path });
+}
+
+export function applyMfImport(rows: MfPreviewRow[]): Promise<MfImportResult> {
+  return invoke("apply_mf_import", { rows });
 }
