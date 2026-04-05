@@ -2,6 +2,7 @@ import { usePortfolio } from "@/hooks/usePortfolio";
 import TotalAssets from "@/components/dashboard/TotalAssets";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
 import AccountList from "@/components/dashboard/AccountList";
+import ManualAssetSummary from "@/components/dashboard/ManualAssetSummary";
 import AssetHistory from "@/components/dashboard/AssetHistory";
 
 export default function Dashboard() {
@@ -56,6 +57,9 @@ export default function Dashboard() {
         <AssetHistory refreshCount={refreshCount} />
       </div>
       <AccountList accounts={data.accounts} prevDate={data.prev_date} />
+      {data.manual_assets.length > 0 && (
+        <ManualAssetSummary assets={data.manual_assets} />
+      )}
     </div>
   );
 }
