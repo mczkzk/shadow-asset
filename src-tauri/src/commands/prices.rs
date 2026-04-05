@@ -78,9 +78,8 @@ fn is_gold(holding_type: &str) -> bool {
 fn asset_class_name(holding_type: &str) -> &'static str {
     match holding_type {
         "fund" | "dc_fund" => "投資信託",
-        "us_stock" => "米国株",
-        "us_etf" => "米国ETF",
-        "crypto" => "仮想通貨",
+        "us_stock" | "us_etf" => "株式",
+        "crypto" => "暗号資産",
         t if is_gold(t) => "ゴールド",
         _ => "その他",
     }
@@ -89,10 +88,10 @@ fn asset_class_name(holding_type: &str) -> &'static str {
 fn asset_class_color(class_name: &str) -> &'static str {
     match class_name {
         "投資信託" => "#4F46E5",
-        "米国株" => "#059669",
-        "米国ETF" => "#2563EB",
-        "仮想通貨" => "#D97706",
+        "株式" => "#059669",
+        "暗号資産" => "#D97706",
         "ゴールド" => "#CA8A04",
+        "債券" => "#8B5CF6",
         _ => "#6B7280",
     }
 }

@@ -49,7 +49,7 @@ fn normalize_fullwidth(s: &str) -> String {
         .collect()
 }
 
-fn read_shift_jis(path: &str) -> Result<String, String> {
+pub(crate) fn read_shift_jis(path: &str) -> Result<String, String> {
     let bytes = fs::read(path).map_err(|e| format!("failed to read file: {e}"))?;
     let (cow, _, had_errors) = SHIFT_JIS.decode(&bytes);
     if had_errors {

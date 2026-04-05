@@ -61,6 +61,18 @@ interface Snapshot {
   breakdown_json: string;
 }
 
+type MfPreviewRow = Omit<Snapshot, "id">;
+
+interface MfImportPreview {
+  rows: MfPreviewRow[];
+  skipped_today: boolean;
+  skipped_existing: number;
+}
+
+interface MfImportResult {
+  imported: number;
+}
+
 interface CategoryBreakdown {
   name: string;
   type: AccountType;
@@ -94,6 +106,9 @@ export type {
   HoldingWithValue,
   AccountWithHoldings,
   Snapshot,
+  MfPreviewRow,
+  MfImportPreview,
+  MfImportResult,
   CategoryBreakdown,
   PortfolioData,
 };
