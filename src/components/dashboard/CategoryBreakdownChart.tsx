@@ -61,7 +61,7 @@ export default function CategoryBreakdownChart({
             >
               <div className="flex items-center gap-2">
                 <span
-                  className="inline-block h-3 w-3 rounded-full"
+                  className="inline-block h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
                 <span className="text-zinc-700">{item.name}</span>

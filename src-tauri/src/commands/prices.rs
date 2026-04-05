@@ -87,7 +87,7 @@ pub(crate) fn asset_class_name(holding_type: &str) -> &'static str {
         "fund" | "dc_fund" => "投資信託",
         "us_stock" | "us_etf" => "株式",
         "crypto" => "預金・現金・暗号資産",
-        t if is_gold(t) => "ゴールド",
+        t if is_gold(t) => "ゴールド(現物)",
         _ => "その他",
     }
 }
@@ -106,7 +106,7 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
         "投資信託" => "#4F46E5",
         "株式" => "#059669",
         "預金・現金・暗号資産" => "#D97706",
-        "ゴールド" => "#CA8A04",
+        "ゴールド" | "ゴールド(現物)" => "#CA8A04",
         "債券" => "#8B5CF6",
         "不動産" => "#F59E0B",
         "保険" => "#EC4899",
@@ -419,7 +419,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     grand_total += manual_assets_total;
 
     let class_order = [
-        "投資信託", "株式", "債券", "ゴールド", "預金・現金・暗号資産",
+        "投資信託", "株式", "債券", "ゴールド(現物)", "預金・現金・暗号資産",
         "不動産", "保険",
     ];
 

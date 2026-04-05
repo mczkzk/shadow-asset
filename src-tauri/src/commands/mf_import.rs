@@ -109,11 +109,11 @@ pub fn preview_mf_import(state: State<AppState>, path: String) -> Result<MfImpor
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let skipped_today = all_rows.iter().any(|r| r.date == today);
 
-    // Batch query: fetch all existing snapshot dates in one go
+    // Dates with holding_snapshots are app-generated (not MF) and must not be overwritten
     let mut stmt = conn
-        .prepare("SELECT date FROM snapshots")
+        .prepare("SELECT DISTINCT date FROM holding_snapshots")
         .map_err(|e| e.to_string())?;
-    let existing_dates: std::collections::HashSet<String> = stmt
+    let app_snapshot_dates: std::collections::HashSet<String> = stmt
         .query_map([], |row| row.get(0))
         .map_err(|e| e.to_string())?
         .filter_map(|r| r.ok())
@@ -126,7 +126,7 @@ pub fn preview_mf_import(state: State<AppState>, path: String) -> Result<MfImpor
         if row.date == today {
             continue;
         }
-        if existing_dates.contains(&row.date) {
+        if app_snapshot_dates.contains(&row.date) {
             skipped_existing += 1;
         } else {
             rows.push(row);
@@ -153,7 +153,7 @@ pub fn apply_mf_import(
     let mut imported = 0usize;
     for row in &rows {
         let result = tx.execute(
-            "INSERT OR IGNORE INTO snapshots (date, total_jpy, breakdown_json) VALUES (?1, ?2, ?3)",
+            "INSERT OR REPLACE INTO snapshots (date, total_jpy, breakdown_json) VALUES (?1, ?2, ?3)",
             params![row.date, row.total_jpy, row.breakdown_json],
         ).map_err(|e| e.to_string())?;
         if result > 0 {
