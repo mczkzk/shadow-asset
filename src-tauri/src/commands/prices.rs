@@ -402,16 +402,18 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             .map(|(_, id, v)| (id, v))
             .collect();
 
-        let mut pt = 0.0;
         for account in &mut accounts_with_holdings {
             for h in &mut account.holdings {
                 if let Some(&pv) = prev_values.get(&(h.holding.id as i64)) {
                     h.prev_value_jpy = Some(pv);
-                    pt += pv;
                 }
             }
         }
-        let prev_total = if !prev_values.is_empty() { Some(pt) } else { None };
+        let prev_total = if !prev_values.is_empty() {
+            Some(prev_values.values().sum::<f64>())
+        } else {
+            None
+        };
 
         // Save today's snapshots in a single transaction
         let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;

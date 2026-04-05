@@ -26,7 +26,7 @@ export default function TotalAssets({
           <span className={diff.change >= 0 ? "text-emerald-300" : "text-red-300"}>
             {diff.sign}{formatJpy(diff.change)} ({diff.sign}{formatPercent(diff.pct, 2)})
           </span>
-          <span className="ml-2 text-xs opacity-60">{prevDate}比</span>
+          {prevDate && <span className="ml-2 text-xs opacity-60">{prevDate}比</span>}
         </p>
       )}
       <div className="mt-4 text-xs opacity-70">

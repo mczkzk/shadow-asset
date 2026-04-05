@@ -16,11 +16,19 @@ function formatPercent(value: number, decimals = 1): string {
   return `${value.toFixed(decimals)}%`;
 }
 
-function formatChange(current: number, prev: number): { change: number; pct: number; sign: string } {
+interface ChangeResult {
+  change: number;
+  pct: number;
+  /** "+" for non-negative, "" for negative (formatJpy handles the minus sign) */
+  sign: string;
+}
+
+function formatChange(current: number, prev: number): ChangeResult {
   const change = current - prev;
   const pct = prev !== 0 ? (change / prev) * 100 : 0;
   const sign = change >= 0 ? "+" : "";
   return { change, pct, sign };
 }
 
+export type { ChangeResult };
 export { formatJpy, formatNumber, formatPercent, formatChange };
