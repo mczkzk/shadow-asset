@@ -1,4 +1,4 @@
-import { formatJpy, formatNumber } from "@/lib/format";
+import { formatJpy, formatNumber, formatChange, formatPercent } from "@/lib/format";
 import type { AccountWithHoldings, HoldingWithValue } from "@/lib/types";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 
@@ -70,6 +70,10 @@ function groupHoldings(
 }
 
 function HoldingRow({ h, prevDate }: { h: HoldingWithValue; prevDate: string | null }) {
+  const diff = h.value_jpy != null && h.prev_value_jpy != null
+    ? formatChange(h.value_jpy, h.prev_value_jpy)
+    : null;
+
   return (
     <div className="flex items-center justify-between px-5 py-2.5 text-sm">
       <div>
@@ -99,17 +103,12 @@ function HoldingRow({ h, prevDate }: { h: HoldingWithValue; prevDate: string | n
         ) : (
           <p className="text-zinc-400">価格取得不可</p>
         )}
-        {h.value_jpy != null && h.prev_value_jpy != null && (() => {
-          const change = h.value_jpy! - h.prev_value_jpy;
-          const pct = h.prev_value_jpy !== 0 ? (change / h.prev_value_jpy) * 100 : 0;
-          return (
-            <p className={`text-xs font-medium ${change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-              {change >= 0 ? "+" : ""}{formatJpy(change)}
-              {" "}({change >= 0 ? "+" : ""}{pct.toFixed(2)}%)
-              {prevDate && <span className="ml-1 font-normal text-zinc-400">{prevDate}比</span>}
-            </p>
-          );
-        })()}
+        {diff && (
+          <p className={`text-xs font-medium ${diff.change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+            {diff.sign}{formatJpy(diff.change)} ({diff.sign}{formatPercent(diff.pct, 2)})
+            {prevDate && <span className="ml-1 font-normal text-zinc-400">{prevDate}比</span>}
+          </p>
+        )}
         {h.price != null && (
           <p className="text-xs text-zinc-400">
             {h.holding_type.startsWith("gold_")

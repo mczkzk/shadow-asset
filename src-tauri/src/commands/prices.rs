@@ -383,61 +383,54 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         let conn = db.as_ref().ok_or("database not initialized")?;
         let today = Local::now().format("%Y-%m-%d").to_string();
 
-        // Load previous holding-level values
-        let holding_prev_date: Option<String> = conn
-            .query_row(
-                "SELECT date FROM holding_snapshots WHERE date < ?1 ORDER BY date DESC LIMIT 1",
-                params![today],
-                |row| row.get(0),
+        // Load previous holding-level values (single query)
+        let mut stmt = conn
+            .prepare(
+                "SELECT date, holding_id, value_jpy FROM holding_snapshots
+                 WHERE date = (SELECT date FROM holding_snapshots WHERE date < ?1 ORDER BY date DESC LIMIT 1)",
             )
-            .ok();
+            .map_err(|e| e.to_string())?;
+        let prev_rows: Vec<(String, i64, f64)> = stmt
+            .query_map(params![today], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
 
-        let (prev_total, prev_date) = if let Some(ref pd) = holding_prev_date {
-            let mut stmt = conn
-                .prepare("SELECT holding_id, value_jpy FROM holding_snapshots WHERE date = ?1")
-                .map_err(|e| e.to_string())?;
-            let prev_values: std::collections::HashMap<i64, f64> = stmt
-                .query_map(params![pd], |row| Ok((row.get(0)?, row.get(1)?)))
-                .map_err(|e| e.to_string())?
-                .filter_map(|r| r.ok())
-                .collect();
+        let prev_date = prev_rows.first().map(|(d, _, _)| d.clone());
+        let prev_values: std::collections::HashMap<i64, f64> = prev_rows
+            .into_iter()
+            .map(|(_, id, v)| (id, v))
+            .collect();
 
-            let mut pt = 0.0;
-            for account in &mut accounts_with_holdings {
-                for h in &mut account.holdings {
-                    if let Some(&pv) = prev_values.get(&(h.holding.id as i64)) {
-                        h.prev_value_jpy = Some(pv);
-                        pt += pv;
-                    }
-                }
-            }
-            if !prev_values.is_empty() {
-                (Some(pt), Some(pd.clone()))
-            } else {
-                (None, None)
-            }
-        } else {
-            (None, None)
-        };
-
-        // Save today's holding snapshots
-        for account in &accounts_with_holdings {
-            for h in &account.holdings {
-                if let Some(v) = h.value_jpy {
-                    let _ = conn.execute(
-                        "INSERT OR REPLACE INTO holding_snapshots (date, holding_id, value_jpy) VALUES (?1, ?2, ?3)",
-                        params![today, h.holding.id, v],
-                    );
+        let mut pt = 0.0;
+        for account in &mut accounts_with_holdings {
+            for h in &mut account.holdings {
+                if let Some(&pv) = prev_values.get(&(h.holding.id as i64)) {
+                    h.prev_value_jpy = Some(pv);
+                    pt += pv;
                 }
             }
         }
+        let prev_total = if !prev_values.is_empty() { Some(pt) } else { None };
 
-        // Save daily portfolio snapshot
+        // Save today's snapshots in a single transaction
+        let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+        for account in &accounts_with_holdings {
+            for h in &account.holdings {
+                if let Some(v) = h.value_jpy {
+                    tx.execute(
+                        "INSERT OR REPLACE INTO holding_snapshots (date, holding_id, value_jpy) VALUES (?1, ?2, ?3)",
+                        params![today, h.holding.id, v],
+                    ).map_err(|e| e.to_string())?;
+                }
+            }
+        }
         let breakdown_json = serde_json::to_string(&breakdown).unwrap_or_default();
-        let _ = conn.execute(
+        tx.execute(
             "INSERT OR REPLACE INTO snapshots (date, total_jpy, breakdown_json) VALUES (?1, ?2, ?3)",
             params![today, grand_total, breakdown_json],
-        );
+        ).map_err(|e| e.to_string())?;
+        tx.commit().map_err(|e| e.to_string())?;
 
         (prev_total, prev_date)
     };

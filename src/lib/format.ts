@@ -12,8 +12,15 @@ function formatNumber(value: number, decimals = 0): string {
   }).format(value);
 }
 
-function formatPercent(value: number): string {
-  return `${value.toFixed(1)}%`;
+function formatPercent(value: number, decimals = 1): string {
+  return `${value.toFixed(decimals)}%`;
 }
 
-export { formatJpy, formatNumber, formatPercent };
+function formatChange(current: number, prev: number): { change: number; pct: number; sign: string } {
+  const change = current - prev;
+  const pct = prev !== 0 ? (change / prev) * 100 : 0;
+  const sign = change >= 0 ? "+" : "";
+  return { change, pct, sign };
+}
+
+export { formatJpy, formatNumber, formatPercent, formatChange };
