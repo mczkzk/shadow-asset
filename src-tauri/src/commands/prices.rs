@@ -74,7 +74,7 @@ fn gold_bar_grams(holding_type: &str) -> Option<f64> {
     }
 }
 
-fn is_gold(holding_type: &str) -> bool {
+pub(crate) fn is_gold(holding_type: &str) -> bool {
     gold_coin_oz(holding_type).is_some() || gold_bar_grams(holding_type).is_some()
 }
 

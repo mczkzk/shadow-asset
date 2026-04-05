@@ -76,6 +76,8 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (isForeign && !amount) return;
+    if (!isForeign && !valueJpy) return;
 
     setSaving(true);
     setError(null);
@@ -166,7 +168,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || (isForeign ? !amount : !valueJpy)}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {saving ? "保存中..." : initial ? "更新" : "追加"}

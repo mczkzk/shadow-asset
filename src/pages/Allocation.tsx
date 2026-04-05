@@ -34,7 +34,7 @@ function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; 
                     <div key={`${h.ticker}-${h.name}`} className="flex items-center justify-between text-xs text-zinc-400">
                       <span>
                         {h.name}
-                        {!h.ticker.startsWith("GOLD") && (
+                        {!h.holding_type.startsWith("gold_") && (
                           <span className="ml-1 text-zinc-300">{h.ticker}</span>
                         )}
                       </span>

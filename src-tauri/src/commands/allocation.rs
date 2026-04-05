@@ -7,8 +7,8 @@ use tauri::State;
 use crate::pricing::forex;
 use crate::AppState;
 
-use super::manual_assets::ManualAsset;
-use super::prices::asset_class_color;
+use super::manual_assets::{self, ManualAsset};
+use super::prices::{asset_class_color, is_gold};
 
 /// Allocation-specific asset class mapping.
 /// Unlike `asset_class_name()` (dashboard: 商品種別), this groups by risk allocation:
@@ -31,7 +31,7 @@ fn allocation_class(holding_type: &str, ticker: &str) -> &'static str {
     match holding_type {
         "fund" | "dc_fund" | "us_stock" | "us_etf" => "株式",
         "crypto" => "暗号資産",
-        t if t.starts_with("gold_coin") || t.starts_with("gold_bar") => "ゴールド",
+        t if is_gold(t) => "ゴールド",
         _ => "その他",
     }
 }
@@ -114,25 +114,7 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
             Vec::new()
         };
 
-        // Get manual assets
-        let mut stmt = conn
-            .prepare("SELECT id, name, asset_class, value_jpy, currency, amount FROM manual_assets ORDER BY id")
-            .map_err(|e| e.to_string())?;
-
-        let manual_assets: Vec<ManualAsset> = stmt
-            .query_map([], |row| {
-                Ok(ManualAsset {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    asset_class: row.get(2)?,
-                    value_jpy: row.get(3)?,
-                    currency: row.get(4)?,
-                    amount: row.get(5)?,
-                })
-            })
-            .map_err(|e| e.to_string())?
-            .filter_map(|r| r.ok())
-            .collect();
+        let manual_assets = manual_assets::read_all(conn)?;
 
         // Collect currencies that need forex conversion
         let needed_currencies: Vec<String> = manual_assets

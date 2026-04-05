@@ -118,6 +118,7 @@ interface ManualAssetWithJpy extends ManualAsset {
 interface AllocationHolding {
   name: string;
   ticker: string;
+  holding_type: string;
   value_jpy: number;
 }
 

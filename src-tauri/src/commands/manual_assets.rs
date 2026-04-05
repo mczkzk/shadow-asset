@@ -33,7 +33,7 @@ pub struct UpdateManualAssetRequest {
     pub amount: Option<f64>,
 }
 
-fn read_all(conn: &rusqlite::Connection) -> Result<Vec<ManualAsset>, String> {
+pub(crate) fn read_all(conn: &rusqlite::Connection) -> Result<Vec<ManualAsset>, String> {
     let mut stmt = conn
         .prepare("SELECT id, name, asset_class, value_jpy, currency, amount FROM manual_assets ORDER BY id")
         .map_err(|e| e.to_string())?;
