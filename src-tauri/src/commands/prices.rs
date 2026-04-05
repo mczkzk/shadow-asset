@@ -80,13 +80,24 @@ pub(crate) fn is_gold(holding_type: &str) -> bool {
     gold_coin_oz(holding_type).is_some() || gold_bar_grams(holding_type).is_some()
 }
 
+/// Dashboard category name for holdings.
+/// Matches MoneyForward CSV columns where possible for trend chart consistency.
 pub(crate) fn asset_class_name(holding_type: &str) -> &'static str {
     match holding_type {
         "fund" | "dc_fund" => "投資信託",
         "us_stock" | "us_etf" => "株式",
-        "crypto" => "暗号資産",
+        "crypto" => "預金・現金・暗号資産",
         t if is_gold(t) => "ゴールド",
         _ => "その他",
+    }
+}
+
+/// Map manual asset classes to dashboard-compatible category names.
+/// Consolidates 現金/生活防衛資金/外貨預金/暗号資産 into MF-compatible "預金・現金・暗号資産".
+pub(crate) fn dashboard_category(asset_class: &str) -> &str {
+    match asset_class {
+        "現金" | "生活防衛資金" | "外貨預金" | "暗号資産" => "預金・現金・暗号資産",
+        other => other,
     }
 }
 
@@ -94,13 +105,15 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
     match class_name {
         "投資信託" => "#4F46E5",
         "株式" => "#059669",
-        "暗号資産" => "#D97706",
+        "預金・現金・暗号資産" => "#D97706",
         "ゴールド" => "#CA8A04",
         "債券" => "#8B5CF6",
-        "現金" => "#10B981",
-        "外貨預金" => "#06B6D4",
         "不動産" => "#F59E0B",
         "保険" => "#EC4899",
+        // Allocation page uses finer-grained categories
+        "暗号資産" => "#D97706",
+        "現金" => "#10B981",
+        "外貨預金" => "#06B6D4",
         "生活防衛資金" => "#84CC16",
         _ => "#6B7280",
     }
@@ -399,14 +412,15 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
 
     for ma in &manual_assets_with_jpy {
         let jpy_value = ma.converted_jpy.or(ma.asset.value_jpy).unwrap_or(0.0);
-        *class_totals.entry(ma.asset.asset_class.clone()).or_default() += jpy_value;
+        let category = dashboard_category(&ma.asset.asset_class);
+        *class_totals.entry(category.to_string()).or_default() += jpy_value;
     }
 
     grand_total += manual_assets_total;
 
     let class_order = [
-        "投資信託", "株式", "債券", "ゴールド", "暗号資産",
-        "現金", "外貨預金", "不動産", "保険", "生活防衛資金",
+        "投資信託", "株式", "債券", "ゴールド", "預金・現金・暗号資産",
+        "不動産", "保険",
     ];
 
     let mut breakdown: Vec<CategoryBreakdown> = class_totals
