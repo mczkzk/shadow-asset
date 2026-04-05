@@ -92,7 +92,6 @@ interface PortfolioData {
   prev_total_jpy: number | null;
   prev_date: string | null;
   manual_assets: ManualAssetWithJpy[];
-  manual_assets_total_jpy: number;
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {

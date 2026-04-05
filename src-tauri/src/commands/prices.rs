@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use chrono::Local;
 use rusqlite::params;
@@ -7,7 +7,7 @@ use tauri::State;
 
 use crate::commands::accounts::Account;
 use crate::commands::holdings::Holding;
-use crate::commands::manual_assets;
+use crate::commands::manual_assets::{self, ManualAssetWithJpy};
 use crate::pricing::{crypto, forex, fund, gold, yahoo};
 use crate::AppState;
 
@@ -40,13 +40,6 @@ pub struct CategoryBreakdown {
     pub color: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
-pub struct ManualAssetWithJpy {
-    #[serde(flatten)]
-    pub asset: manual_assets::ManualAsset,
-    pub converted_jpy: Option<f64>,
-}
-
 #[derive(Debug, Serialize)]
 pub struct PortfolioResponse {
     pub total_jpy: f64,
@@ -58,7 +51,6 @@ pub struct PortfolioResponse {
     pub prev_total_jpy: Option<f64>,
     pub prev_date: Option<String>,
     pub manual_assets: Vec<ManualAssetWithJpy>,
-    pub manual_assets_total_jpy: f64,
 }
 
 fn gold_coin_oz(holding_type: &str) -> Option<f64> {
@@ -291,13 +283,10 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
 
         let manual_assets_raw = manual_assets::read_all(conn)?;
 
-        let needed_currencies: Vec<String> = manual_assets_raw
-            .iter()
-            .filter_map(|a| a.currency.as_ref())
-            .filter(|c| !c.is_empty())
-            .cloned()
-            .collect::<HashSet<_>>()
+        // Exclude USD since fetch_usd_jpy() already fetches JPY=X
+        let needed_currencies: Vec<String> = manual_assets::needed_forex_currencies(&manual_assets_raw)
             .into_iter()
+            .filter(|c| c != "USD")
             .collect();
 
         (accounts, holdings, manual_assets_raw, needed_currencies)
@@ -330,7 +319,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     let crypto_list: Vec<String> = crypto_symbols.into_iter().collect();
     let fund_list: Vec<String> = fund_tickers.into_iter().collect();
 
-    let (usd_jpy, gold_prices, crypto_prices, stock_prices, fund_prices, manual_forex_rates) = tokio::join!(
+    let (usd_jpy, gold_prices, crypto_prices, stock_prices, fund_prices, mut manual_forex_rates) = tokio::join!(
         forex::fetch_usd_jpy(),
         gold::fetch_gold_prices(),
         crypto::fetch_crypto_prices_jpy(&crypto_list),
@@ -338,12 +327,15 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         fund::fetch_fund_prices(&fund_list),
         async {
             if needed_currencies.is_empty() {
-                HashMap::new()
+                std::collections::HashMap::new()
             } else {
                 forex::fetch_forex_rates(&needed_currencies).await
             }
         },
     );
+
+    // Reuse the already-fetched USD/JPY rate for manual asset conversion
+    manual_forex_rates.insert("USD".to_string(), usd_jpy);
 
     // Calculate portfolio
     let mut grand_total = 0.0;
@@ -402,24 +394,13 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     }
 
     // Convert manual assets and add to breakdown
-    let mut manual_assets_total = 0.0;
-    let manual_assets_with_jpy: Vec<ManualAssetWithJpy> = manual_assets_raw
-        .into_iter()
-        .map(|a| {
-            let converted_jpy = if let (Some(currency), Some(amount)) = (&a.currency, a.amount) {
-                manual_forex_rates.get(currency.as_str()).map(|rate| amount * rate)
-            } else {
-                None
-            };
-            let jpy_value = converted_jpy.or(a.value_jpy).unwrap_or(0.0);
-            *class_totals.entry(a.asset_class.clone()).or_default() += jpy_value;
-            manual_assets_total += jpy_value;
-            ManualAssetWithJpy {
-                asset: a,
-                converted_jpy,
-            }
-        })
-        .collect();
+    let (manual_assets_with_jpy, manual_assets_total) =
+        manual_assets::convert_to_jpy(manual_assets_raw, &manual_forex_rates);
+
+    for ma in &manual_assets_with_jpy {
+        let jpy_value = ma.converted_jpy.or(ma.asset.value_jpy).unwrap_or(0.0);
+        *class_totals.entry(ma.asset.asset_class.clone()).or_default() += jpy_value;
+    }
 
     grand_total += manual_assets_total;
 
@@ -467,8 +448,8 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             }
         }
         let prev_total = if !prev_values.is_empty() {
-            // Include manual assets in prev_total for fair comparison
-            // (manual assets are user-entered and assumed unchanged between snapshots)
+            // Approximation: manual assets lack their own snapshots, so we add
+            // current values to both sides. Inaccurate if user edits between snapshots.
             Some(prev_values.values().sum::<f64>() + manual_assets_total)
         } else {
             None
@@ -506,7 +487,6 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         prev_total_jpy,
         prev_date,
         manual_assets: manual_assets_with_jpy,
-        manual_assets_total_jpy: manual_assets_total,
     })
 }
 

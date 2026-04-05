@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -12,6 +14,51 @@ pub struct ManualAsset {
     pub value_jpy: Option<f64>,
     pub currency: Option<String>,
     pub amount: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ManualAssetWithJpy {
+    #[serde(flatten)]
+    pub asset: ManualAsset,
+    pub converted_jpy: Option<f64>,
+}
+
+/// Extract unique currency codes that need forex conversion.
+pub fn needed_forex_currencies(assets: &[ManualAsset]) -> Vec<String> {
+    assets
+        .iter()
+        .filter_map(|a| a.currency.as_ref())
+        .filter(|c| !c.is_empty())
+        .cloned()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+/// Convert manual assets to JPY using forex rates.
+/// Returns (converted assets, total JPY value).
+pub fn convert_to_jpy(
+    assets: Vec<ManualAsset>,
+    forex_rates: &HashMap<String, f64>,
+) -> (Vec<ManualAssetWithJpy>, f64) {
+    let mut total = 0.0;
+    let with_jpy = assets
+        .into_iter()
+        .map(|a| {
+            let converted_jpy = if let (Some(currency), Some(amount)) = (&a.currency, a.amount) {
+                forex_rates.get(currency.as_str()).map(|rate| amount * rate)
+            } else {
+                None
+            };
+            let jpy_value = converted_jpy.or(a.value_jpy).unwrap_or(0.0);
+            total += jpy_value;
+            ManualAssetWithJpy {
+                asset: a,
+                converted_jpy,
+            }
+        })
+        .collect();
+    (with_jpy, total)
 }
 
 #[derive(Debug, Deserialize)]
