@@ -1,4 +1,4 @@
-import { formatJpy, formatNumber } from "@/lib/format";
+import { formatJpy, formatNumber, formatChange, formatPercent } from "@/lib/format";
 import type { AccountWithHoldings, HoldingWithValue } from "@/lib/types";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 
@@ -12,6 +12,7 @@ function unitLabel(holdingType: string): string {
 
 interface AccountListProps {
   accounts: AccountWithHoldings[];
+  prevDate: string | null;
 }
 
 const HOLDING_GROUP_LABELS: Record<string, string> = {
@@ -68,7 +69,11 @@ function groupHoldings(
     }));
 }
 
-function HoldingRow({ h }: { h: HoldingWithValue }) {
+function HoldingRow({ h, prevDate }: { h: HoldingWithValue; prevDate: string | null }) {
+  const diff = h.value_jpy != null && h.prev_value_jpy != null
+    ? formatChange(h.value_jpy, h.prev_value_jpy)
+    : null;
+
   return (
     <div className="flex items-center justify-between px-5 py-2.5 text-sm">
       <div>
@@ -98,6 +103,12 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
         ) : (
           <p className="text-zinc-400">価格取得不可</p>
         )}
+        {diff && (
+          <p className={`text-xs font-medium ${diff.change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+            {diff.sign}{formatJpy(diff.change)} ({diff.sign}{formatPercent(diff.pct, 2)})
+            {prevDate && <span className="ml-1 font-normal text-zinc-400">{prevDate}比</span>}
+          </p>
+        )}
         {h.price != null && (
           <p className="text-xs text-zinc-400">
             {h.holding_type.startsWith("gold_")
@@ -110,7 +121,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
   );
 }
 
-export default function AccountList({ accounts }: AccountListProps) {
+export default function AccountList({ accounts, prevDate }: AccountListProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-zinc-700">口座別詳細</h2>
@@ -146,7 +157,7 @@ export default function AccountList({ accounts }: AccountListProps) {
                 )}
                 <div className="divide-y divide-zinc-50">
                   {group.items.map((h) => (
-                    <HoldingRow key={h.id} h={h} />
+                    <HoldingRow key={h.id} h={h} prevDate={prevDate} />
                   ))}
                 </div>
               </div>

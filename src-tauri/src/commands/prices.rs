@@ -19,6 +19,7 @@ pub struct HoldingWithValue {
     pub currency: String,
     pub value_jpy: Option<f64>,
     pub estimated_quantity: Option<f64>,
+    pub prev_value_jpy: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -46,6 +47,8 @@ pub struct PortfolioResponse {
     pub gold_bar_gram_jpy: f64,
     pub accounts: Vec<AccountWithHoldings>,
     pub breakdown: Vec<CategoryBreakdown>,
+    pub prev_total_jpy: Option<f64>,
+    pub prev_date: Option<String>,
 }
 
 fn gold_coin_oz(holding_type: &str) -> Option<f64> {
@@ -146,6 +149,7 @@ fn calculate_value(
             currency: "JPY".to_string(),
             value_jpy: Some(value),
             estimated_quantity: None,
+            prev_value_jpy: None,
         };
     }
 
@@ -158,6 +162,7 @@ fn calculate_value(
             currency: "JPY".to_string(),
             value_jpy: Some(value),
             estimated_quantity: None,
+            prev_value_jpy: None,
         };
     }
 
@@ -170,6 +175,7 @@ fn calculate_value(
                 currency: currency.to_string(),
                 value_jpy: None,
                 estimated_quantity: None,
+                prev_value_jpy: None,
             }
         }
     };
@@ -204,6 +210,7 @@ fn calculate_value(
         } else {
             None
         },
+        prev_value_jpy: None,
     }
 }
 
@@ -370,17 +377,65 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         })
         .collect();
 
-    // Save daily snapshot
-    {
+    // Load previous holding snapshots + save current ones
+    let (prev_total_jpy, prev_date) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let conn = db.as_ref().ok_or("database not initialized")?;
         let today = Local::now().format("%Y-%m-%d").to_string();
+
+        // Load previous holding-level values (single query)
+        let mut stmt = conn
+            .prepare(
+                "SELECT date, holding_id, value_jpy FROM holding_snapshots
+                 WHERE date = (SELECT date FROM holding_snapshots WHERE date < ?1 ORDER BY date DESC LIMIT 1)",
+            )
+            .map_err(|e| e.to_string())?;
+        let prev_rows: Vec<(String, i64, f64)> = stmt
+            .query_map(params![today], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let prev_date = prev_rows.first().map(|(d, _, _)| d.clone());
+        let prev_values: std::collections::HashMap<i64, f64> = prev_rows
+            .into_iter()
+            .map(|(_, id, v)| (id, v))
+            .collect();
+
+        for account in &mut accounts_with_holdings {
+            for h in &mut account.holdings {
+                if let Some(&pv) = prev_values.get(&(h.holding.id as i64)) {
+                    h.prev_value_jpy = Some(pv);
+                }
+            }
+        }
+        let prev_total = if !prev_values.is_empty() {
+            Some(prev_values.values().sum::<f64>())
+        } else {
+            None
+        };
+
+        // Save today's snapshots in a single transaction
+        let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+        for account in &accounts_with_holdings {
+            for h in &account.holdings {
+                if let Some(v) = h.value_jpy {
+                    tx.execute(
+                        "INSERT OR REPLACE INTO holding_snapshots (date, holding_id, value_jpy) VALUES (?1, ?2, ?3)",
+                        params![today, h.holding.id, v],
+                    ).map_err(|e| e.to_string())?;
+                }
+            }
+        }
         let breakdown_json = serde_json::to_string(&breakdown).unwrap_or_default();
-        let _ = conn.execute(
+        tx.execute(
             "INSERT OR REPLACE INTO snapshots (date, total_jpy, breakdown_json) VALUES (?1, ?2, ?3)",
             params![today, grand_total, breakdown_json],
-        );
-    }
+        ).map_err(|e| e.to_string())?;
+        tx.commit().map_err(|e| e.to_string())?;
+
+        (prev_total, prev_date)
+    };
 
     Ok(PortfolioResponse {
         total_jpy: grand_total,
@@ -389,6 +444,8 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         gold_bar_gram_jpy: gold_prices.bar_per_gram_jpy,
         accounts: accounts_with_holdings,
         breakdown,
+        prev_total_jpy,
+        prev_date,
     })
 }
 

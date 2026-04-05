@@ -47,6 +47,7 @@ interface HoldingWithValue extends Holding {
   currency: string;
   value_jpy: number | null;
   estimated_quantity: number | null;
+  prev_value_jpy: number | null;
 }
 
 interface AccountWithHoldings extends Account {
@@ -87,6 +88,8 @@ interface PortfolioData {
   gold_bar_gram_jpy: number;
   accounts: AccountWithHoldings[];
   breakdown: CategoryBreakdown[];
+  prev_total_jpy: number | null;
+  prev_date: string | null;
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {

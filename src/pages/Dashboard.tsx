@@ -38,6 +38,8 @@ export default function Dashboard() {
         <TotalAssets
           totalJpy={data.total_jpy}
           usdJpy={data.usd_jpy}
+          prevTotalJpy={data.prev_total_jpy}
+          prevDate={data.prev_date}
         />
         <button
           onClick={refresh}
@@ -53,7 +55,7 @@ export default function Dashboard() {
         />
         <AssetHistory refreshCount={refreshCount} />
       </div>
-      <AccountList accounts={data.accounts} />
+      <AccountList accounts={data.accounts} prevDate={data.prev_date} />
     </div>
   );
 }
