@@ -12,6 +12,7 @@ function unitLabel(holdingType: string): string {
 
 interface AccountListProps {
   accounts: AccountWithHoldings[];
+  prevDate: string | null;
 }
 
 const HOLDING_GROUP_LABELS: Record<string, string> = {
@@ -68,7 +69,7 @@ function groupHoldings(
     }));
 }
 
-function HoldingRow({ h }: { h: HoldingWithValue }) {
+function HoldingRow({ h, prevDate }: { h: HoldingWithValue; prevDate: string | null }) {
   return (
     <div className="flex items-center justify-between px-5 py-2.5 text-sm">
       <div>
@@ -98,6 +99,17 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
         ) : (
           <p className="text-zinc-400">価格取得不可</p>
         )}
+        {h.value_jpy != null && h.prev_value_jpy != null && (() => {
+          const change = h.value_jpy! - h.prev_value_jpy;
+          const pct = h.prev_value_jpy !== 0 ? (change / h.prev_value_jpy) * 100 : 0;
+          return (
+            <p className={`text-xs font-medium ${change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+              {change >= 0 ? "+" : ""}{formatJpy(change)}
+              {" "}({change >= 0 ? "+" : ""}{pct.toFixed(2)}%)
+              {prevDate && <span className="ml-1 font-normal text-zinc-400">{prevDate}比</span>}
+            </p>
+          );
+        })()}
         {h.price != null && (
           <p className="text-xs text-zinc-400">
             {h.holding_type.startsWith("gold_")
@@ -110,7 +122,7 @@ function HoldingRow({ h }: { h: HoldingWithValue }) {
   );
 }
 
-export default function AccountList({ accounts }: AccountListProps) {
+export default function AccountList({ accounts, prevDate }: AccountListProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-zinc-700">口座別詳細</h2>
@@ -146,7 +158,7 @@ export default function AccountList({ accounts }: AccountListProps) {
                 )}
                 <div className="divide-y divide-zinc-50">
                   {group.items.map((h) => (
-                    <HoldingRow key={h.id} h={h} />
+                    <HoldingRow key={h.id} h={h} prevDate={prevDate} />
                   ))}
                 </div>
               </div>

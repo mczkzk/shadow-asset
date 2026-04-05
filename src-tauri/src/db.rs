@@ -43,6 +43,14 @@ pub fn initialize(app_handle: &AppHandle) -> Connection {
             date           TEXT NOT NULL UNIQUE,
             total_jpy      REAL NOT NULL,
             breakdown_json TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS holding_snapshots (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            date       TEXT NOT NULL,
+            holding_id INTEGER NOT NULL REFERENCES holdings(id) ON DELETE CASCADE,
+            value_jpy  REAL NOT NULL,
+            UNIQUE(date, holding_id)
         );",
     )
     .expect("failed to create tables");
