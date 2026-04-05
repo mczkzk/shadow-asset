@@ -404,7 +404,12 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
 
     grand_total += manual_assets_total;
 
-    let breakdown: Vec<CategoryBreakdown> = class_totals
+    let class_order = [
+        "投資信託", "株式", "債券", "ゴールド", "暗号資産",
+        "現金", "外貨預金", "不動産", "保険", "生活防衛資金",
+    ];
+
+    let mut breakdown: Vec<CategoryBreakdown> = class_totals
         .into_iter()
         .filter(|(_, v)| *v > 0.0)
         .map(|(name, value)| CategoryBreakdown {
@@ -414,6 +419,12 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             value,
         })
         .collect();
+
+    breakdown.sort_by(|a, b| {
+        let a_idx = class_order.iter().position(|&c| c == a.name).unwrap_or(99);
+        let b_idx = class_order.iter().position(|&c| c == b.name).unwrap_or(99);
+        a_idx.cmp(&b_idx)
+    });
 
     // Load previous holding snapshots + save current ones
     let (prev_total_jpy, prev_date) = {
