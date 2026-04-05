@@ -1,9 +1,23 @@
-import type { AllocationData } from "@/lib/types";
+import type { AllocationData, ManualAssetWithJpy } from "@/lib/types";
+import { getManualAssetJpy } from "@/lib/types";
 import { useAllocation } from "@/hooks/useAllocation";
-import { formatJpy, formatPercent } from "@/lib/format";
+import { formatJpy, formatNumber, formatPercent } from "@/lib/format";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
 
-function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; totalJpy: number }) {
+function AllocationTable({
+  items,
+  totalJpy,
+  manualAssets,
+}: {
+  items: AllocationData["items"];
+  totalJpy: number;
+  manualAssets: ManualAssetWithJpy[];
+}) {
+  const manualByClass: Record<string, ManualAssetWithJpy[]> = {};
+  for (const a of manualAssets) {
+    (manualByClass[a.asset_class] ??= []).push(a);
+  }
+
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
       <h2 className="text-sm font-semibold text-zinc-700">配分詳細</h2>
@@ -13,6 +27,7 @@ function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; 
       <div className="mt-2 divide-y divide-zinc-100">
         {items.map((item) => {
           const pct = totalJpy > 0 ? (item.value / totalJpy) * 100 : 0;
+          const classManual = manualByClass[item.name] ?? [];
           return (
             <div key={item.name} className="py-2">
               <div className="flex items-center gap-3">
@@ -28,7 +43,7 @@ function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; 
                   {formatJpy(item.value)}
                 </span>
               </div>
-              {item.holdings.length > 0 && (
+              {(item.holdings.length > 0 || classManual.length > 0) && (
                 <div className="ml-5 mt-1 space-y-0.5">
                   {item.holdings.map((h) => (
                     <div key={`${h.ticker}-${h.name}`} className="flex items-center justify-between text-xs text-zinc-400">
@@ -39,6 +54,19 @@ function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; 
                         )}
                       </span>
                       <span>{formatJpy(h.value_jpy)}</span>
+                    </div>
+                  ))}
+                  {classManual.map((a) => (
+                    <div key={`manual-${a.id}`} className="flex items-center justify-between text-xs text-zinc-400">
+                      <span>
+                        {a.name}
+                        {a.currency && a.amount != null && (
+                          <span className="ml-1 text-zinc-300">
+                            {a.currency} {formatNumber(a.amount, 2)}
+                          </span>
+                        )}
+                      </span>
+                      <span>{formatJpy(getManualAssetJpy(a))}</span>
                     </div>
                   ))}
                 </div>
@@ -104,12 +132,14 @@ export default function Allocation() {
 
       {data.items.length > 0 && (
         <>
-          <CategoryBreakdownChart
-            breakdown={data.items}
-            totalJpy={data.total_jpy}
-            title="アセットアロケーション"
-          />
-          <AllocationTable items={data.items} totalJpy={data.total_jpy} />
+          <div className="w-1/2">
+            <CategoryBreakdownChart
+              breakdown={data.items}
+              totalJpy={data.total_jpy}
+              title="アセットアロケーション"
+            />
+          </div>
+          <AllocationTable items={data.items} totalJpy={data.total_jpy} manualAssets={data.manual_assets} />
         </>
       )}
 

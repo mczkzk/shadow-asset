@@ -91,6 +91,7 @@ interface PortfolioData {
   breakdown: CategoryBreakdown[];
   prev_total_jpy: number | null;
   prev_date: string | null;
+  manual_assets: ManualAssetWithJpy[];
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -113,6 +114,22 @@ interface ManualAsset {
 
 interface ManualAssetWithJpy extends ManualAsset {
   converted_jpy: number | null;
+}
+
+const MANUAL_ASSET_CLASS_ORDER = ["現金", "外貨預金", "不動産", "保険", "生活防衛資金"] as const;
+
+function getManualAssetJpy(a: ManualAssetWithJpy): number {
+  return a.converted_jpy ?? a.value_jpy ?? 0;
+}
+
+function groupManualAssetsByClass(assets: ManualAssetWithJpy[]): { label: string; items: ManualAssetWithJpy[] }[] {
+  const groups: Record<string, ManualAssetWithJpy[]> = {};
+  for (const a of assets) {
+    (groups[a.asset_class] ??= []).push(a);
+  }
+  return MANUAL_ASSET_CLASS_ORDER
+    .filter((c) => groups[c]?.length)
+    .map((c) => ({ label: c, items: groups[c] }));
 }
 
 interface AllocationHolding {
@@ -156,4 +173,9 @@ export type {
   AllocationData,
 };
 
-export { ACCOUNT_TYPE_LABELS };
+export {
+  ACCOUNT_TYPE_LABELS,
+  MANUAL_ASSET_CLASS_ORDER,
+  getManualAssetJpy,
+  groupManualAssetsByClass,
+};

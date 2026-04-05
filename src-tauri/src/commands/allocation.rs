@@ -7,7 +7,7 @@ use tauri::State;
 use crate::pricing::forex;
 use crate::AppState;
 
-use super::manual_assets::{self, ManualAsset};
+use super::manual_assets::{self, ManualAssetWithJpy};
 use super::prices::{asset_class_color, is_gold};
 
 /// Allocation-specific asset class mapping.
@@ -61,13 +61,6 @@ pub struct AllocationResponse {
     pub forex_rates: HashMap<String, f64>,
 }
 
-#[derive(Debug, Serialize, Clone)]
-pub struct ManualAssetWithJpy {
-    #[serde(flatten)]
-    pub asset: ManualAsset,
-    pub converted_jpy: Option<f64>,
-}
-
 #[tauri::command]
 pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationResponse, String> {
     // Read DB data: holding snapshots + holdings metadata + manual assets
@@ -115,16 +108,7 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
         };
 
         let manual_assets = manual_assets::read_all(conn)?;
-
-        // Collect currencies that need forex conversion
-        let needed_currencies: Vec<String> = manual_assets
-            .iter()
-            .filter_map(|a| a.currency.as_ref())
-            .filter(|c| !c.is_empty())
-            .cloned()
-            .collect::<std::collections::HashSet<_>>()
-            .into_iter()
-            .collect();
+        let needed_currencies = manual_assets::needed_forex_currencies(&manual_assets);
 
         (snapshot_date, holding_values, manual_assets, needed_currencies)
     };
@@ -152,24 +136,13 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
     }
 
     // Manual assets with JPY conversion
-    let manual_assets_with_jpy: Vec<ManualAssetWithJpy> = manual_assets
-        .into_iter()
-        .map(|a| {
-            let converted_jpy = if let (Some(currency), Some(amount)) = (&a.currency, a.amount) {
-                forex_rates.get(currency.as_str()).map(|rate| amount * rate)
-            } else {
-                None
-            };
+    let (manual_assets_with_jpy, _) =
+        manual_assets::convert_to_jpy(manual_assets, &forex_rates);
 
-            let jpy_value = converted_jpy.or(a.value_jpy).unwrap_or(0.0);
-            *class_totals.entry(a.asset_class.clone()).or_default() += jpy_value;
-
-            ManualAssetWithJpy {
-                asset: a,
-                converted_jpy,
-            }
-        })
-        .collect();
+    for ma in &manual_assets_with_jpy {
+        let jpy_value = ma.converted_jpy.or(ma.asset.value_jpy).unwrap_or(0.0);
+        *class_totals.entry(ma.asset.asset_class.clone()).or_default() += jpy_value;
+    }
 
     // Build sorted allocation items
     let total_jpy: f64 = class_totals.values().sum();

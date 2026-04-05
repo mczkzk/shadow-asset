@@ -7,6 +7,7 @@ use tauri::State;
 
 use crate::commands::accounts::Account;
 use crate::commands::holdings::Holding;
+use crate::commands::manual_assets::{self, ManualAssetWithJpy};
 use crate::pricing::{crypto, forex, fund, gold, yahoo};
 use crate::AppState;
 
@@ -49,6 +50,7 @@ pub struct PortfolioResponse {
     pub breakdown: Vec<CategoryBreakdown>,
     pub prev_total_jpy: Option<f64>,
     pub prev_date: Option<String>,
+    pub manual_assets: Vec<ManualAssetWithJpy>,
 }
 
 fn gold_coin_oz(holding_type: &str) -> Option<f64> {
@@ -78,13 +80,24 @@ pub(crate) fn is_gold(holding_type: &str) -> bool {
     gold_coin_oz(holding_type).is_some() || gold_bar_grams(holding_type).is_some()
 }
 
+/// Dashboard category name for holdings.
+/// Matches MoneyForward CSV columns where possible for trend chart consistency.
 pub(crate) fn asset_class_name(holding_type: &str) -> &'static str {
     match holding_type {
         "fund" | "dc_fund" => "投資信託",
         "us_stock" | "us_etf" => "株式",
-        "crypto" => "暗号資産",
-        t if is_gold(t) => "ゴールド",
+        "crypto" => "預金・現金・暗号資産",
+        t if is_gold(t) => "ゴールド(現物)",
         _ => "その他",
+    }
+}
+
+/// Map manual asset classes to dashboard-compatible category names.
+/// Consolidates 現金/生活防衛資金/外貨預金/暗号資産 into MF-compatible "預金・現金・暗号資産".
+pub(crate) fn dashboard_category(asset_class: &str) -> &str {
+    match asset_class {
+        "現金" | "生活防衛資金" | "外貨預金" | "暗号資産" => "預金・現金・暗号資産",
+        other => other,
     }
 }
 
@@ -92,13 +105,15 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
     match class_name {
         "投資信託" => "#4F46E5",
         "株式" => "#059669",
-        "暗号資産" => "#D97706",
-        "ゴールド" => "#CA8A04",
+        "預金・現金・暗号資産" => "#D97706",
+        "ゴールド" | "ゴールド(現物)" => "#CA8A04",
         "債券" => "#8B5CF6",
-        "現金" => "#10B981",
-        "外貨預金" => "#06B6D4",
         "不動産" => "#F59E0B",
         "保険" => "#EC4899",
+        // Allocation page uses finer-grained categories
+        "暗号資産" => "#D97706",
+        "現金" => "#10B981",
+        "外貨預金" => "#06B6D4",
         "生活防衛資金" => "#84CC16",
         _ => "#6B7280",
     }
@@ -224,7 +239,7 @@ use chrono::Datelike;
 #[tauri::command]
 pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResponse, String> {
     // Read DB data
-    let (accounts, all_holdings) = {
+    let (accounts, all_holdings, manual_assets_raw, needed_currencies) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let conn = db.as_ref().ok_or("database not initialized")?;
 
@@ -279,7 +294,15 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
 
-        (accounts, holdings)
+        let manual_assets_raw = manual_assets::read_all(conn)?;
+
+        // Exclude USD since fetch_usd_jpy() already fetches JPY=X
+        let needed_currencies: Vec<String> = manual_assets::needed_forex_currencies(&manual_assets_raw)
+            .into_iter()
+            .filter(|c| c != "USD")
+            .collect();
+
+        (accounts, holdings, manual_assets_raw, needed_currencies)
     };
 
     // Categorize tickers
@@ -309,13 +332,23 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     let crypto_list: Vec<String> = crypto_symbols.into_iter().collect();
     let fund_list: Vec<String> = fund_tickers.into_iter().collect();
 
-    let (usd_jpy, gold_prices, crypto_prices, stock_prices, fund_prices) = tokio::join!(
+    let (usd_jpy, gold_prices, crypto_prices, stock_prices, fund_prices, mut manual_forex_rates) = tokio::join!(
         forex::fetch_usd_jpy(),
         gold::fetch_gold_prices(),
         crypto::fetch_crypto_prices_jpy(&crypto_list),
         yahoo::fetch_stock_prices(&stock_list),
         fund::fetch_fund_prices(&fund_list),
+        async {
+            if needed_currencies.is_empty() {
+                std::collections::HashMap::new()
+            } else {
+                forex::fetch_forex_rates(&needed_currencies).await
+            }
+        },
     );
+
+    // Reuse the already-fetched USD/JPY rate for manual asset conversion
+    manual_forex_rates.insert("USD".to_string(), usd_jpy);
 
     // Calculate portfolio
     let mut grand_total = 0.0;
@@ -373,7 +406,24 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         }
     }
 
-    let breakdown: Vec<CategoryBreakdown> = class_totals
+    // Convert manual assets and add to breakdown
+    let (manual_assets_with_jpy, manual_assets_total) =
+        manual_assets::convert_to_jpy(manual_assets_raw, &manual_forex_rates);
+
+    for ma in &manual_assets_with_jpy {
+        let jpy_value = ma.converted_jpy.or(ma.asset.value_jpy).unwrap_or(0.0);
+        let category = dashboard_category(&ma.asset.asset_class);
+        *class_totals.entry(category.to_string()).or_default() += jpy_value;
+    }
+
+    grand_total += manual_assets_total;
+
+    let class_order = [
+        "投資信託", "株式", "債券", "ゴールド(現物)", "預金・現金・暗号資産",
+        "不動産", "保険",
+    ];
+
+    let mut breakdown: Vec<CategoryBreakdown> = class_totals
         .into_iter()
         .filter(|(_, v)| *v > 0.0)
         .map(|(name, value)| CategoryBreakdown {
@@ -383,6 +433,12 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             value,
         })
         .collect();
+
+    breakdown.sort_by(|a, b| {
+        let a_idx = class_order.iter().position(|&c| c == a.name).unwrap_or(99);
+        let b_idx = class_order.iter().position(|&c| c == b.name).unwrap_or(99);
+        a_idx.cmp(&b_idx)
+    });
 
     // Load previous holding snapshots + save current ones
     let (prev_total_jpy, prev_date) = {
@@ -417,7 +473,9 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
             }
         }
         let prev_total = if !prev_values.is_empty() {
-            Some(prev_values.values().sum::<f64>())
+            // Approximation: manual assets lack their own snapshots, so we add
+            // current values to both sides. Inaccurate if user edits between snapshots.
+            Some(prev_values.values().sum::<f64>() + manual_assets_total)
         } else {
             None
         };
@@ -453,6 +511,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
         breakdown,
         prev_total_jpy,
         prev_date,
+        manual_assets: manual_assets_with_jpy,
     })
 }
 

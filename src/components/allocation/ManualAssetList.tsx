@@ -1,20 +1,9 @@
 import { useState, useMemo } from "react";
 import { formatJpy, formatNumber } from "@/lib/format";
 import type { ManualAsset, ManualAssetWithJpy } from "@/lib/types";
+import { getManualAssetJpy, groupManualAssetsByClass } from "@/lib/types";
 import * as api from "@/lib/api";
 import ManualAssetForm from "./ManualAssetForm";
-
-const CLASS_ORDER = ["現金", "外貨預金", "不動産", "保険", "生活防衛資金"];
-
-function groupByClass(assets: ManualAssetWithJpy[]): { label: string; items: ManualAssetWithJpy[] }[] {
-  const groups: Record<string, ManualAssetWithJpy[]> = {};
-  for (const a of assets) {
-    (groups[a.asset_class] ??= []).push(a);
-  }
-  return CLASS_ORDER
-    .filter((c) => groups[c]?.length)
-    .map((c) => ({ label: c, items: groups[c] }));
-}
 
 interface ManualAssetListProps {
   assets: ManualAssetWithJpy[];
@@ -26,7 +15,7 @@ export default function ManualAssetList({ assets, forexRates, onChanged }: Manua
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const groups = useMemo(() => groupByClass(assets), [assets]);
+  const groups = useMemo(() => groupManualAssetsByClass(assets), [assets]);
 
   const handleCreate = async (data: Omit<ManualAsset, "id">) => {
     await api.createManualAsset(data);
@@ -114,7 +103,7 @@ export default function ManualAssetList({ assets, forexRates, onChanged }: Manua
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-zinc-800">
-                      {formatJpy(a.converted_jpy ?? a.value_jpy ?? 0)}
+                      {formatJpy(getManualAssetJpy(a))}
                     </span>
                     <div className="flex gap-1">
                       <button
