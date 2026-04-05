@@ -14,8 +14,17 @@ import { formatJpy } from "@/lib/format";
 import type { Snapshot, MfImportPreview } from "@/lib/types";
 
 interface ChartRow {
-  date: string;
-  [key: string]: string | number;
+  ts: number;
+  [key: string]: number;
+}
+
+function dateToTs(dateStr: string): number {
+  return new Date(dateStr + "T00:00:00").getTime();
+}
+
+function formatDate(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function buildChartData(snapshots: Snapshot[]): {
@@ -29,7 +38,7 @@ function buildChartData(snapshots: Snapshot[]): {
 
   for (const s of snapshots) {
     const parsed: unknown = JSON.parse(s.breakdown_json || "[]");
-    const row: ChartRow = { date: s.date };
+    const row: ChartRow = { ts: dateToTs(s.date) };
 
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
@@ -56,6 +65,36 @@ function buildChartData(snapshots: Snapshot[]): {
   return { data, keys, colors };
 }
 
+type Period = "1m" | "3m" | "6m" | "1y" | "all";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "1m", label: "1ヶ月" },
+  { key: "3m", label: "3ヶ月" },
+  { key: "6m", label: "6ヶ月" },
+  { key: "1y", label: "1年" },
+  { key: "all", label: "全期間" },
+];
+
+function periodStartDate(period: Period): string | null {
+  if (period === "all") return null;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const day = now.getDate();
+  let target: Date;
+  switch (period) {
+    case "1m": target = new Date(y, m - 1, day); break;
+    case "3m": target = new Date(y, m - 3, day); break;
+    case "6m": target = new Date(y, m - 6, day); break;
+    case "1y": target = new Date(y - 1, m, day); break;
+  }
+  // Clamp to last day of target month when day overflows (e.g. Mar 31 -> Feb 28)
+  if (target.getDate() !== day) {
+    target.setDate(0); // back to last day of previous month
+  }
+  return target.toISOString().slice(0, 10);
+}
+
 export default function AssetHistory({
   refreshCount = 0,
 }: {
@@ -66,6 +105,7 @@ export default function AssetHistory({
   const [importing, setImporting] = useState(false);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<Period>("all");
 
   const handlePickCsv = async () => {
     const file = await open({
@@ -108,9 +148,15 @@ export default function AssetHistory({
     [snapshots]
   );
 
+  const filtered = useMemo(() => {
+    const start = periodStartDate(period);
+    if (!start) return all;
+    return all.filter((s) => s.date >= start);
+  }, [all, period]);
+
   const { data, keys, colors } = useMemo(
-    () => all.length < 2 ? { data: [], keys: [], colors: {} } : buildChartData(all),
-    [all]
+    () => filtered.length < 2 ? { data: [], keys: [], colors: {} } : buildChartData(filtered),
+    [filtered]
   );
 
   if (isLoading) {
@@ -121,19 +167,36 @@ export default function AssetHistory({
     );
   }
 
-  const emptyState = all.length < 2;
+  const emptyState = filtered.length < 2;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-700">資産推移</h2>
-        <button
-          onClick={handlePickCsv}
-          disabled={importing}
-          className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-50"
-        >
-          {importing ? "読込中..." : "MF CSV取込"}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded border border-zinc-200">
+            {PERIODS.map(({ key, label }, i) => (
+              <button
+                key={key}
+                onClick={() => setPeriod(key)}
+                className={`px-2 py-1 text-xs ${
+                  period === key
+                    ? "bg-zinc-700 text-white"
+                    : "text-zinc-500 hover:bg-zinc-50"
+                } ${i > 0 ? "border-l border-zinc-200" : ""}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handlePickCsv}
+            disabled={importing}
+            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-50"
+          >
+            {importing ? "読込中..." : "MF CSV取込"}
+          </button>
+        </div>
       </div>
 
       {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
@@ -189,21 +252,24 @@ export default function AssetHistory({
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <XAxis
-                dataKey="date"
+                dataKey="ts"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
                 tick={{ fontSize: 11 }}
-                tickFormatter={(v: string) => v.slice(5)}
+                tickFormatter={formatDate}
               />
               <YAxis
                 tick={{ fontSize: 11 }}
-                tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}万`}
-                width={60}
+                tickFormatter={(v: number) => `${Math.round(v / 10000).toLocaleString()}万`}
+                width={72}
               />
               <Tooltip
                 formatter={(value: unknown, name: string) => [
                   formatJpy(Number(value)),
                   name,
                 ]}
-                labelFormatter={(label: unknown) => String(label)}
+                labelFormatter={formatDate}
               />
               {keys.map((key) => (
                 <Area
