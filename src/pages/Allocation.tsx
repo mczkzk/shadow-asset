@@ -131,11 +131,13 @@ export default function Allocation() {
 
       {data.items.length > 0 && (
         <>
-          <CategoryBreakdownChart
-            breakdown={data.items}
-            totalJpy={data.total_jpy}
-            title="アセットアロケーション"
-          />
+          <div className="w-1/2">
+            <CategoryBreakdownChart
+              breakdown={data.items}
+              totalJpy={data.total_jpy}
+              title="アセットアロケーション"
+            />
+          </div>
           <AllocationTable items={data.items} totalJpy={data.total_jpy} manualAssets={data.manual_assets} />
         </>
       )}

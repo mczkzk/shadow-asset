@@ -126,7 +126,7 @@ function GearMenu() {
       )}
 
       {confirmImport && (
-        <div className="fixed inset-x-0 top-14 z-30 mx-auto max-w-5xl px-6">
+        <div className="fixed inset-x-0 top-14 z-30 mx-auto max-w-6xl px-6">
           <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm shadow-md">
             <span className="text-amber-800">
               <span className="font-medium">{confirmImport.replace(/.*[/\\]/, "")}</span>
@@ -149,7 +149,7 @@ function GearMenu() {
       )}
 
       {error && (
-        <div className="fixed inset-x-0 top-14 z-30 mx-auto max-w-5xl px-6">
+        <div className="fixed inset-x-0 top-14 z-30 mx-auto max-w-6xl px-6">
           <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm shadow-md">
             <span className="text-red-600">{error}</span>
             <button onClick={() => setError(null)} className="text-xs text-zinc-500 hover:text-zinc-700">
@@ -167,7 +167,7 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-zinc-50">
         <header className="border-b border-zinc-200 bg-white">
-          <div className="mx-auto flex max-w-5xl items-center gap-2 px-6 py-3">
+          <div className="mx-auto flex max-w-6xl items-center gap-2 px-6 py-3">
             <NavItem to="/">ダッシュボード</NavItem>
             <NavItem to="/allocation">アロケーション</NavItem>
             <NavItem to="/accounts">保有管理</NavItem>
@@ -176,7 +176,7 @@ export default function App() {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-6 py-6">
+        <main className="mx-auto max-w-6xl px-6 py-6">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/allocation" element={<Allocation />} />
