@@ -22,6 +22,11 @@ function dateToTs(dateStr: string): number {
   return new Date(dateStr + "T00:00:00").getTime();
 }
 
+function formatDate(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function buildChartData(snapshots: Snapshot[]): {
   data: ChartRow[];
   keys: string[];
@@ -244,10 +249,7 @@ export default function AssetHistory({
                 scale="time"
                 domain={["dataMin", "dataMax"]}
                 tick={{ fontSize: 11 }}
-                tickFormatter={(v: number) => {
-                  const d = new Date(v);
-                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                }}
+                tickFormatter={formatDate}
               />
               <YAxis
                 tick={{ fontSize: 11 }}
@@ -259,10 +261,7 @@ export default function AssetHistory({
                   formatJpy(Number(value)),
                   name,
                 ]}
-                labelFormatter={(v: number) => {
-                  const d = new Date(v);
-                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                }}
+                labelFormatter={formatDate}
               />
               {keys.map((key) => (
                 <Area
