@@ -77,14 +77,22 @@ const PERIODS: { key: Period; label: string }[] = [
 
 function periodStartDate(period: Period): string | null {
   if (period === "all") return null;
-  const d = new Date();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const day = now.getDate();
+  let target: Date;
   switch (period) {
-    case "1m": d.setMonth(d.getMonth() - 1); break;
-    case "3m": d.setMonth(d.getMonth() - 3); break;
-    case "6m": d.setMonth(d.getMonth() - 6); break;
-    case "1y": d.setFullYear(d.getFullYear() - 1); break;
+    case "1m": target = new Date(y, m - 1, day); break;
+    case "3m": target = new Date(y, m - 3, day); break;
+    case "6m": target = new Date(y, m - 6, day); break;
+    case "1y": target = new Date(y - 1, m, day); break;
   }
-  return d.toISOString().slice(0, 10);
+  // Clamp to last day of target month when day overflows (e.g. Mar 31 -> Feb 28)
+  if (target.getDate() !== day) {
+    target.setDate(0); // back to last day of previous month
+  }
+  return target.toISOString().slice(0, 10);
 }
 
 export default function AssetHistory({
