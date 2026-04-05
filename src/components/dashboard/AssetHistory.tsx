@@ -14,8 +14,12 @@ import { formatJpy } from "@/lib/format";
 import type { Snapshot, MfImportPreview } from "@/lib/types";
 
 interface ChartRow {
-  date: string;
-  [key: string]: string | number;
+  ts: number;
+  [key: string]: number;
+}
+
+function dateToTs(dateStr: string): number {
+  return new Date(dateStr + "T00:00:00").getTime();
 }
 
 function buildChartData(snapshots: Snapshot[]): {
@@ -29,7 +33,7 @@ function buildChartData(snapshots: Snapshot[]): {
 
   for (const s of snapshots) {
     const parsed: unknown = JSON.parse(s.breakdown_json || "[]");
-    const row: ChartRow = { date: s.date };
+    const row: ChartRow = { ts: dateToTs(s.date) };
 
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
@@ -235,9 +239,15 @@ export default function AssetHistory({
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <XAxis
-                dataKey="date"
+                dataKey="ts"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
                 tick={{ fontSize: 11 }}
-                tickFormatter={(v: string) => v.slice(5)}
+                tickFormatter={(v: number) => {
+                  const d = new Date(v);
+                  return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                }}
               />
               <YAxis
                 tick={{ fontSize: 11 }}
@@ -249,7 +259,10 @@ export default function AssetHistory({
                   formatJpy(Number(value)),
                   name,
                 ]}
-                labelFormatter={(label: unknown) => String(label)}
+                labelFormatter={(v: number) => {
+                  const d = new Date(v);
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                }}
               />
               {keys.map((key) => (
                 <Area
