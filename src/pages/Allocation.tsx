@@ -1,4 +1,5 @@
 import type { AllocationData, ManualAssetWithJpy } from "@/lib/types";
+import { getManualAssetJpy } from "@/lib/types";
 import { useAllocation } from "@/hooks/useAllocation";
 import { formatJpy, formatNumber, formatPercent } from "@/lib/format";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
@@ -65,7 +66,7 @@ function AllocationTable({
                           </span>
                         )}
                       </span>
-                      <span>{formatJpy(a.converted_jpy ?? a.value_jpy ?? 0)}</span>
+                      <span>{formatJpy(getManualAssetJpy(a))}</span>
                     </div>
                   ))}
                 </div>

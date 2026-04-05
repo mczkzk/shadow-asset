@@ -1,35 +1,21 @@
 import { formatJpy, formatNumber } from "@/lib/format";
 import type { ManualAssetWithJpy } from "@/lib/types";
-
-const CLASS_ORDER = ["現金", "外貨預金", "不動産", "保険", "生活防衛資金"];
-
-function groupByClass(assets: ManualAssetWithJpy[]): { label: string; items: ManualAssetWithJpy[] }[] {
-  const groups: Record<string, ManualAssetWithJpy[]> = {};
-  for (const a of assets) {
-    (groups[a.asset_class] ??= []).push(a);
-  }
-  return CLASS_ORDER
-    .filter((c) => groups[c]?.length)
-    .map((c) => ({ label: c, items: groups[c] }));
-}
+import { getManualAssetJpy, groupManualAssetsByClass } from "@/lib/types";
 
 interface ManualAssetSummaryProps {
   assets: ManualAssetWithJpy[];
 }
 
 export default function ManualAssetSummary({ assets }: ManualAssetSummaryProps) {
-  const groups = groupByClass(assets);
-  const total = assets.reduce(
-    (sum, a) => sum + (a.converted_jpy ?? a.value_jpy ?? 0),
-    0,
-  );
+  const groups = groupManualAssetsByClass(assets);
+  const total = assets.reduce((sum, a) => sum + getManualAssetJpy(a), 0);
 
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-zinc-700">手入力資産</h2>
       <div className="rounded-xl border border-zinc-200 bg-white">
         <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-zinc-800">手入力資産</h3>
+          <span className="text-sm font-semibold text-zinc-800">合計</span>
           <span className="text-base font-bold text-zinc-900">
             {formatJpy(total)}
           </span>
@@ -58,7 +44,7 @@ export default function ManualAssetSummary({ assets }: ManualAssetSummaryProps) 
                     )}
                   </div>
                   <span className="font-medium text-zinc-800">
-                    {formatJpy(a.converted_jpy ?? a.value_jpy ?? 0)}
+                    {formatJpy(getManualAssetJpy(a))}
                   </span>
                 </div>
               ))}
