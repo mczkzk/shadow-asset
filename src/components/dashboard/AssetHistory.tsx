@@ -246,13 +246,13 @@ export default function AssetHistory({
                 tick={{ fontSize: 11 }}
                 tickFormatter={(v: number) => {
                   const d = new Date(v);
-                  return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
                 }}
               />
               <YAxis
                 tick={{ fontSize: 11 }}
-                tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}万`}
-                width={60}
+                tickFormatter={(v: number) => `${Math.round(v / 10000).toLocaleString()}万`}
+                width={72}
               />
               <Tooltip
                 formatter={(value: unknown, name: string) => [
