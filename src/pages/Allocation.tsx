@@ -2,7 +2,6 @@ import type { AllocationData } from "@/lib/types";
 import { useAllocation } from "@/hooks/useAllocation";
 import { formatJpy, formatPercent } from "@/lib/format";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
-import ManualAssetList from "@/components/allocation/ManualAssetList";
 
 function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; totalJpy: number }) {
   return (
@@ -11,30 +10,39 @@ function AllocationTable({ items, totalJpy }: { items: AllocationData["items"]; 
       <div className="mt-3 text-right text-xs text-zinc-400">
         合計: <span className="font-medium text-zinc-700">{formatJpy(totalJpy)}</span>
       </div>
-      <div className="mt-2 space-y-1">
+      <div className="mt-2 divide-y divide-zinc-100">
         {items.map((item) => {
           const pct = totalJpy > 0 ? (item.value / totalJpy) * 100 : 0;
           return (
-            <div key={item.name} className="flex items-center gap-3 py-1.5">
-              <span
-                className="inline-block h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="flex-1 text-sm text-zinc-700">{item.name}</span>
-              <div className="w-24">
-                <div className="h-2 rounded-full bg-zinc-100">
-                  <div
-                    className="h-2 rounded-full"
-                    style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: item.color }}
-                  />
-                </div>
+            <div key={item.name} className="py-2">
+              <div className="flex items-center gap-3">
+                <span
+                  className="inline-block h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="flex-1 text-sm font-medium text-zinc-700">{item.name}</span>
+                <span className="text-sm font-medium text-zinc-900">
+                  {formatPercent(pct)}
+                </span>
+                <span className="w-28 text-right text-sm text-zinc-500">
+                  {formatJpy(item.value)}
+                </span>
               </div>
-              <span className="w-16 text-right text-sm font-medium text-zinc-900">
-                {formatPercent(pct)}
-              </span>
-              <span className="w-28 text-right text-sm text-zinc-500">
-                {formatJpy(item.value)}
-              </span>
+              {item.holdings.length > 0 && (
+                <div className="ml-5 mt-1 space-y-0.5">
+                  {item.holdings.map((h) => (
+                    <div key={`${h.ticker}-${h.name}`} className="flex items-center justify-between text-xs text-zinc-400">
+                      <span>
+                        {h.name}
+                        {!h.ticker.startsWith("GOLD") && (
+                          <span className="ml-1 text-zinc-300">{h.ticker}</span>
+                        )}
+                      </span>
+                      <span>{formatJpy(h.value_jpy)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -95,21 +103,16 @@ export default function Allocation() {
       </div>
 
       {data.items.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2">
+        <>
           <CategoryBreakdownChart
             breakdown={data.items}
             totalJpy={data.total_jpy}
             title="アセットアロケーション"
           />
           <AllocationTable items={data.items} totalJpy={data.total_jpy} />
-        </div>
+        </>
       )}
 
-      <ManualAssetList
-        assets={data.manual_assets}
-        forexRates={data.forex_rates}
-        onChanged={refresh}
-      />
     </div>
   );
 }

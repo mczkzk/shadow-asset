@@ -37,10 +37,19 @@ fn allocation_class(holding_type: &str, ticker: &str) -> &'static str {
 }
 
 #[derive(Debug, Serialize, Clone)]
+pub struct AllocationHolding {
+    pub name: String,
+    pub ticker: String,
+    pub holding_type: String,
+    pub value_jpy: f64,
+}
+
+#[derive(Debug, Serialize, Clone)]
 pub struct AllocationItem {
     pub name: String,
     pub value: f64,
     pub color: String,
+    pub holdings: Vec<AllocationHolding>,
 }
 
 #[derive(Debug, Serialize)]
@@ -76,10 +85,11 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
             .map_err(|e| e.to_string())?;
 
         // Get holding values from snapshots + asset_class from holdings
-        let holding_values: Vec<(String, f64)> = if let Some(ref date) = snapshot_date {
+        // (class, name, ticker, holding_type, value_jpy)
+        let holding_values: Vec<(String, String, String, String, f64)> = if let Some(ref date) = snapshot_date {
             let mut stmt = conn
                 .prepare(
-                    "SELECT h.holding_type, h.asset_class, h.ticker, hs.value_jpy
+                    "SELECT h.holding_type, h.asset_class, h.ticker, h.name, hs.value_jpy
                      FROM holding_snapshots hs
                      JOIN holdings h ON hs.holding_id = h.id
                      WHERE hs.date = ?1",
@@ -90,10 +100,11 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
                 let holding_type: String = row.get(0)?;
                 let explicit_class: Option<String> = row.get(1)?;
                 let ticker: String = row.get(2)?;
-                let value_jpy: f64 = row.get(3)?;
+                let name: String = row.get(3)?;
+                let value_jpy: f64 = row.get(4)?;
                 let class = explicit_class
                     .unwrap_or_else(|| allocation_class(&holding_type, &ticker).to_string());
-                Ok((class, value_jpy))
+                Ok((class, name, ticker, holding_type, value_jpy))
             })
             .map_err(|e| e.to_string())?
             .filter_map(|r| r.ok())
@@ -145,10 +156,17 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
 
     // Aggregate by asset class
     let mut class_totals: HashMap<String, f64> = HashMap::new();
+    let mut class_holdings: HashMap<String, Vec<AllocationHolding>> = HashMap::new();
 
     // Holdings from snapshots
-    for (class, value) in &holding_values {
+    for (class, name, ticker, holding_type, value) in &holding_values {
         *class_totals.entry(class.clone()).or_default() += value;
+        class_holdings.entry(class.clone()).or_default().push(AllocationHolding {
+            name: name.clone(),
+            ticker: ticker.clone(),
+            holding_type: holding_type.clone(),
+            value_jpy: *value,
+        });
     }
 
     // Manual assets with JPY conversion
@@ -181,10 +199,29 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
     let mut items: Vec<AllocationItem> = class_totals
         .into_iter()
         .filter(|(_, v)| *v > 0.0)
-        .map(|(name, value)| AllocationItem {
-            color: asset_class_color(&name).to_string(),
-            name,
-            value,
+        .map(|(name, value)| {
+            let mut holdings = class_holdings.remove(&name).unwrap_or_default();
+            fn type_order(t: &str) -> u8 {
+                match t {
+                    "fund" | "dc_fund" => 0,
+                    "us_stock" => 1,
+                    "us_etf" => 2,
+                    "crypto" => 3,
+                    t if t.starts_with("gold_coin") => 4,
+                    t if t.starts_with("gold_bar") => 5,
+                    _ => 9,
+                }
+            }
+            holdings.sort_by(|a, b| {
+                type_order(&a.holding_type).cmp(&type_order(&b.holding_type))
+                    .then_with(|| b.value_jpy.partial_cmp(&a.value_jpy).unwrap_or(std::cmp::Ordering::Equal))
+            });
+            AllocationItem {
+                color: asset_class_color(&name).to_string(),
+                name,
+                value,
+                holdings,
+            }
         })
         .collect();
 

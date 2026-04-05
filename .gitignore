@@ -37,8 +37,5 @@ yarn-error.log*
 *.sln
 *.sw?
 
-# Claude Code skills (local, not shared)
-.claude/skills/
-
 # typescript
 *.tsbuildinfo

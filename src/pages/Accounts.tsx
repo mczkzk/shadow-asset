@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { Account, Holding, AccountType, HoldingType } from "@/lib/types";
+import type { Account, Holding, AccountType, HoldingType, AllocationData } from "@/lib/types";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/types";
 import { ACCOUNT_PRESETS, HOLDING_PRESETS } from "@/lib/presets";
 import { formatNumber } from "@/lib/format";
 import type { CsvImportPreview } from "@/lib/api";
 import * as api from "@/lib/api";
+import ManualAssetList from "@/components/allocation/ManualAssetList";
 
 // 口座種類ごとに登録可能な保有種類
 // NISA/特定口座: 投信も米国株もETFも全て保有可能
@@ -544,6 +545,8 @@ export default function Accounts() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [expandedAccount, setExpandedAccount] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [allocationData, setAllocationData] = useState<AllocationData | null>(null);
+  const [showAddAccount, setShowAddAccount] = useState(false);
 
   const refresh = useCallback(async () => {
     const [a, h] = await Promise.all([api.getAccounts(), api.getHoldings()]);
@@ -551,9 +554,14 @@ export default function Accounts() {
     setHoldings(h);
   }, []);
 
+  const refreshManualAssets = useCallback(async () => {
+    setAllocationData(await api.fetchAllocation());
+  }, []);
+
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    refreshManualAssets();
+  }, [refresh, refreshManualAssets]);
 
   const existingNames = useMemo(
     () => new Set(accounts.map((a) => a.name)),
@@ -620,10 +628,8 @@ export default function Accounts() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-zinc-800">保有管理</h1>
-          <p className="text-sm text-zinc-500">口座と銘柄の追加、編集、削除</p>
-        </div>
+        <h1 className="text-lg font-bold text-zinc-800">保有管理</h1>
+        <div className="flex gap-2">
         <div className="relative group">
           <button
             disabled={csvImportLoading}
@@ -650,6 +656,7 @@ export default function Accounts() {
               <span className="mt-0.5 block text-xs text-zinc-400">取引履歴 → 投資信託 → すべて → CSVで保存</span>
             </button>
           </div>
+        </div>
         </div>
       </div>
 
@@ -705,12 +712,32 @@ export default function Accounts() {
         </div>
       )}
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-5">
-        <h2 className="mb-3 text-sm font-semibold text-zinc-700">
-          口座を追加
-        </h2>
-        <AccountForm onCreated={refresh} existingNames={existingNames} />
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-zinc-700">口座</h2>
+        {!showAddAccount && (
+          <button
+            onClick={() => setShowAddAccount(true)}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
+          >
+            + 口座を追加
+          </button>
+        )}
       </div>
+
+      {showAddAccount && (
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-700">口座を追加</h3>
+            <button
+              onClick={() => setShowAddAccount(false)}
+              className="text-xs text-zinc-400 hover:text-zinc-600"
+            >
+              閉じる
+            </button>
+          </div>
+          <AccountForm onCreated={() => { refresh(); setShowAddAccount(false); }} existingNames={existingNames} />
+        </div>
+      )}
 
       <div className="space-y-3">
         {accounts.map((account) => {
@@ -815,9 +842,15 @@ export default function Accounts() {
 
       {accounts.length === 0 && (
         <p className="text-center text-sm text-zinc-400">
-          上のプリセットから口座を追加してください
+          「+ 口座を追加」から口座を追加してください
         </p>
       )}
+
+      <ManualAssetList
+        assets={allocationData?.manual_assets ?? []}
+        forexRates={allocationData?.forex_rates ?? {}}
+        onChanged={refreshManualAssets}
+      />
     </div>
   );
 }

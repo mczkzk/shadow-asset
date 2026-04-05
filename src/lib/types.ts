@@ -115,10 +115,17 @@ interface ManualAssetWithJpy extends ManualAsset {
   converted_jpy: number | null;
 }
 
+interface AllocationHolding {
+  name: string;
+  ticker: string;
+  value_jpy: number;
+}
+
 interface AllocationItem {
   name: string;
   value: number;
   color: string;
+  holdings: AllocationHolding[];
 }
 
 interface AllocationData {
