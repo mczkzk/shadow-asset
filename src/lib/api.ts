@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, Holding, PortfolioData, Snapshot, MfImportPreview, MfPreviewRow, MfImportResult } from "./types";
+import type { Account, Holding, PortfolioData, Snapshot, MfImportPreview, MfPreviewRow, MfImportResult, ManualAsset, AllocationData } from "./types";
 
 // Accounts
 export function getAccounts(): Promise<Account[]> {
@@ -113,4 +113,26 @@ export function previewMfImport(path: string): Promise<MfImportPreview> {
 
 export function applyMfImport(rows: MfPreviewRow[]): Promise<MfImportResult> {
   return invoke("apply_mf_import", { rows });
+}
+
+// Allocation
+export function fetchAllocation(): Promise<AllocationData> {
+  return invoke("fetch_allocation");
+}
+
+// Manual Assets
+export function getManualAssets(): Promise<ManualAsset[]> {
+  return invoke("get_manual_assets");
+}
+
+export function createManualAsset(request: Omit<ManualAsset, "id">): Promise<ManualAsset> {
+  return invoke("create_manual_asset", { request });
+}
+
+export function updateManualAsset(request: ManualAsset): Promise<void> {
+  return invoke("update_manual_asset", { request });
+}
+
+export function deleteManualAsset(id: number): Promise<void> {
+  return invoke("delete_manual_asset", { id });
 }

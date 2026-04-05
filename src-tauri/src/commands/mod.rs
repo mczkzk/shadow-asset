@@ -1,7 +1,9 @@
 pub mod accounts;
+pub mod allocation;
 pub mod csv_import;
 pub mod export_import;
 pub mod holdings;
+pub mod manual_assets;
 pub mod mf_import;
 pub mod prices;
 pub mod snapshots;

@@ -1,15 +1,22 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { formatJpy, formatPercent } from "@/lib/format";
-import type { CategoryBreakdown } from "@/lib/types";
+
+interface BreakdownEntry {
+  name: string;
+  value: number;
+  color: string;
+}
 
 interface CategoryBreakdownChartProps {
-  breakdown: CategoryBreakdown[];
+  breakdown: BreakdownEntry[];
   totalJpy: number;
+  title?: string;
 }
 
 export default function CategoryBreakdownChart({
   breakdown,
   totalJpy,
+  title = "資産内訳",
 }: CategoryBreakdownChartProps) {
   if (breakdown.length === 0) {
     return (
@@ -21,7 +28,7 @@ export default function CategoryBreakdownChart({
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
-      <h2 className="text-sm font-semibold text-zinc-700">資産内訳</h2>
+      <h2 className="text-sm font-semibold text-zinc-700">{title}</h2>
       <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row">
         <div className="h-48 w-48">
           <ResponsiveContainer width="100%" height="100%">

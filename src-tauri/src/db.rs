@@ -55,5 +55,20 @@ pub fn initialize(app_handle: &AppHandle) -> Connection {
     )
     .expect("failed to create tables");
 
+    // Additive migration: asset_class on holdings (ignore if already exists)
+    let _ = conn.execute("ALTER TABLE holdings ADD COLUMN asset_class TEXT", []);
+
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS manual_assets (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            name         TEXT NOT NULL,
+            asset_class  TEXT NOT NULL,
+            value_jpy    REAL,
+            currency     TEXT,
+            amount       REAL
+        );",
+    )
+    .expect("failed to create manual_assets table");
+
     conn
 }

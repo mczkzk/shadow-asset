@@ -40,6 +40,7 @@ interface Holding {
   holding_type: HoldingType;
   as_of: string | null;
   monthly_amount: number | null;
+  asset_class: string | null;
 }
 
 interface HoldingWithValue extends Holding {
@@ -76,7 +77,7 @@ interface MfImportResult {
 
 interface CategoryBreakdown {
   name: string;
-  type: AccountType;
+  type: string;
   value: number;
   color: string;
 }
@@ -101,6 +102,33 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   dc: "確定拠出年金",
 };
 
+interface ManualAsset {
+  id: number;
+  name: string;
+  asset_class: string;
+  value_jpy: number | null;
+  currency: string | null;
+  amount: number | null;
+}
+
+interface ManualAssetWithJpy extends ManualAsset {
+  converted_jpy: number | null;
+}
+
+interface AllocationItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface AllocationData {
+  total_jpy: number;
+  items: AllocationItem[];
+  manual_assets: ManualAssetWithJpy[];
+  snapshot_date: string | null;
+  forex_rates: Record<string, number>;
+}
+
 export type {
   AccountType,
   HoldingType,
@@ -114,6 +142,10 @@ export type {
   MfImportResult,
   CategoryBreakdown,
   PortfolioData,
+  ManualAsset,
+  ManualAssetWithJpy,
+  AllocationItem,
+  AllocationData,
 };
 
 export { ACCOUNT_TYPE_LABELS };

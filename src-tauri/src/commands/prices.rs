@@ -78,7 +78,7 @@ fn is_gold(holding_type: &str) -> bool {
     gold_coin_oz(holding_type).is_some() || gold_bar_grams(holding_type).is_some()
 }
 
-fn asset_class_name(holding_type: &str) -> &'static str {
+pub(crate) fn asset_class_name(holding_type: &str) -> &'static str {
     match holding_type {
         "fund" | "dc_fund" => "投資信託",
         "us_stock" | "us_etf" => "株式",
@@ -95,6 +95,11 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
         "暗号資産" => "#D97706",
         "ゴールド" => "#CA8A04",
         "債券" => "#8B5CF6",
+        "現金" => "#10B981",
+        "外貨預金" => "#06B6D4",
+        "不動産" => "#F59E0B",
+        "保険" => "#EC4899",
+        "生活防衛資金" => "#84CC16",
         _ => "#6B7280",
     }
 }
@@ -252,7 +257,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
 
         let mut stmt = conn
             .prepare(
-                "SELECT id, account_id, ticker, name, quantity, holding_type, as_of, monthly_amount
+                "SELECT id, account_id, ticker, name, quantity, holding_type, as_of, monthly_amount, asset_class
                  FROM holdings ORDER BY id",
             )
             .map_err(|e| e.to_string())?;
@@ -267,6 +272,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
                     holding_type: row.get(5)?,
                     as_of: row.get(6)?,
                     monthly_amount: row.get(7)?,
+                    asset_class: row.get(8)?,
                 })
             })
             .map_err(|e| e.to_string())?
@@ -361,7 +367,8 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     let mut class_totals: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
     for a in &accounts_with_holdings {
         for h in &a.holdings {
-            let class = asset_class_name(&h.holding.holding_type);
+            let class = h.holding.asset_class.as_deref()
+                .unwrap_or_else(|| asset_class_name(&h.holding.holding_type));
             *class_totals.entry(class.to_string()).or_default() += h.value_jpy.unwrap_or(0.0);
         }
     }
@@ -463,6 +470,7 @@ mod tests {
             holding_type: holding_type.to_string(),
             as_of: None,
             monthly_amount: None,
+            asset_class: None,
         }
     }
 

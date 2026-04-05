@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import Dashboard from "@/pages/Dashboard";
 import Accounts from "@/pages/Accounts";
+import Allocation from "@/pages/Allocation";
 
 function NavItem({
   to,
@@ -32,12 +33,14 @@ export default function App() {
         <header className="border-b border-zinc-200 bg-white">
           <div className="mx-auto flex max-w-5xl items-center gap-2 px-6 py-3">
             <NavItem to="/">ダッシュボード</NavItem>
+            <NavItem to="/allocation">アロケーション</NavItem>
             <NavItem to="/accounts">保有管理</NavItem>
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-6 py-6">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/allocation" element={<Allocation />} />
             <Route path="/accounts" element={<Accounts />} />
           </Routes>
         </main>

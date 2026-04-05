@@ -41,6 +41,11 @@ pub fn run() {
             commands::csv_import::apply_csv_import,
             commands::mf_import::preview_mf_import,
             commands::mf_import::apply_mf_import,
+            commands::manual_assets::get_manual_assets,
+            commands::manual_assets::create_manual_asset,
+            commands::manual_assets::update_manual_asset,
+            commands::manual_assets::delete_manual_asset,
+            commands::allocation::fetch_allocation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

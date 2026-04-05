@@ -24,6 +24,20 @@ struct ExportHolding {
     as_of: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     monthly_amount: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    asset_class: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ExportManualAsset {
+    name: String,
+    asset_class: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value_jpy: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    currency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    amount: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,6 +53,8 @@ struct ExportData {
     exported_at: String,
     accounts: Vec<ExportAccount>,
     snapshots: Vec<ExportSnapshot>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    manual_assets: Vec<ExportManualAsset>,
 }
 
 #[tauri::command]
@@ -60,7 +76,7 @@ pub fn export_data(state: State<AppState>, path: String) -> Result<(), String> {
 
         let mut holdings_stmt = conn
             .prepare(
-                "SELECT ticker, name, quantity, holding_type, as_of, monthly_amount
+                "SELECT ticker, name, quantity, holding_type, as_of, monthly_amount, asset_class
                  FROM holdings WHERE account_id = ?1 ORDER BY id",
             )
             .map_err(|e| e.to_string())?;
@@ -77,6 +93,7 @@ pub fn export_data(state: State<AppState>, path: String) -> Result<(), String> {
                             holding_type: row.get(3)?,
                             as_of: row.get(4)?,
                             monthly_amount: row.get(5)?,
+                            asset_class: row.get(6)?,
                         })
                     })
                     .map_err(|e| e.to_string())?
@@ -108,11 +125,30 @@ pub fn export_data(state: State<AppState>, path: String) -> Result<(), String> {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
 
+        let mut ma_stmt = conn
+            .prepare("SELECT name, asset_class, value_jpy, currency, amount FROM manual_assets ORDER BY id")
+            .map_err(|e| e.to_string())?;
+
+        let manual_assets = ma_stmt
+            .query_map([], |row| {
+                Ok(ExportManualAsset {
+                    name: row.get(0)?,
+                    asset_class: row.get(1)?,
+                    value_jpy: row.get(2)?,
+                    currency: row.get(3)?,
+                    amount: row.get(4)?,
+                })
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+
         let export = ExportData {
             version: 1,
             exported_at: chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string(),
             accounts: export_accounts,
             snapshots,
+            manual_assets,
         };
 
         serde_json::to_string_pretty(&export).map_err(|e| e.to_string())?
@@ -141,6 +177,8 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
     // Clear existing data (accounts CASCADE deletes holdings)
     tx.execute("DELETE FROM snapshots", [])
         .map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM manual_assets", [])
+        .map_err(|e| e.to_string())?;
     tx.execute("DELETE FROM accounts", [])
         .map_err(|e| e.to_string())?;
 
@@ -156,8 +194,8 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
 
         for holding in &account.holdings {
             tx.execute(
-                "INSERT INTO holdings (account_id, ticker, name, quantity, holding_type, as_of, monthly_amount)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO holdings (account_id, ticker, name, quantity, holding_type, as_of, monthly_amount, asset_class)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     account_id,
                     holding.ticker,
@@ -166,6 +204,7 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
                     holding.holding_type,
                     holding.as_of,
                     holding.monthly_amount,
+                    holding.asset_class,
                 ],
             )
             .map_err(|e| e.to_string())?;
@@ -177,6 +216,16 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
         tx.execute(
             "INSERT INTO snapshots (date, total_jpy, breakdown_json) VALUES (?1, ?2, ?3)",
             params![snapshot.date, snapshot.total_jpy, snapshot.breakdown_json],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    // Import manual assets
+    for ma in &data.manual_assets {
+        tx.execute(
+            "INSERT INTO manual_assets (name, asset_class, value_jpy, currency, amount)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![ma.name, ma.asset_class, ma.value_jpy, ma.currency, ma.amount],
         )
         .map_err(|e| e.to_string())?;
     }

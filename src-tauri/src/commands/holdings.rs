@@ -14,6 +14,7 @@ pub struct Holding {
     pub holding_type: String,
     pub as_of: Option<String>,
     pub monthly_amount: Option<f64>,
+    pub asset_class: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,7 +46,7 @@ pub fn get_holdings(state: State<AppState>) -> Result<Vec<Holding>, String> {
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, account_id, ticker, name, quantity, holding_type, as_of, monthly_amount
+            "SELECT id, account_id, ticker, name, quantity, holding_type, as_of, monthly_amount, asset_class
              FROM holdings ORDER BY id",
         )
         .map_err(|e| e.to_string())?;
@@ -61,6 +62,7 @@ pub fn get_holdings(state: State<AppState>) -> Result<Vec<Holding>, String> {
                 holding_type: row.get(5)?,
                 as_of: row.get(6)?,
                 monthly_amount: row.get(7)?,
+                asset_class: row.get(8)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -103,6 +105,7 @@ pub fn create_holding(
         holding_type: request.holding_type,
         as_of: request.as_of,
         monthly_amount: request.monthly_amount,
+        asset_class: None,
     })
 }
 
