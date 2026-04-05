@@ -167,7 +167,7 @@ export default function AssetHistory({
         <h2 className="text-sm font-semibold text-zinc-700">資産推移</h2>
         <div className="flex items-center gap-2">
           <div className="flex rounded border border-zinc-200">
-            {PERIODS.map(({ key, label }) => (
+            {PERIODS.map(({ key, label }, i) => (
               <button
                 key={key}
                 onClick={() => setPeriod(key)}
@@ -175,7 +175,7 @@ export default function AssetHistory({
                   period === key
                     ? "bg-zinc-700 text-white"
                     : "text-zinc-500 hover:bg-zinc-50"
-                } ${key !== "1m" ? "border-l border-zinc-200" : ""}`}
+                } ${i > 0 ? "border-l border-zinc-200" : ""}`}
               >
                 {label}
               </button>
