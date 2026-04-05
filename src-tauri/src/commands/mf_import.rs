@@ -25,12 +25,14 @@ pub struct MfImportResult {
     imported: usize,
 }
 
-fn build_breakdown_json(fund: f64, stock: f64, bond: f64) -> String {
+fn build_breakdown_json(fund: f64, stock: f64, bond: f64, cash_crypto: f64, insurance: f64) -> String {
     let mut items = Vec::new();
-    let categories: [(&str, f64); 3] = [
+    let categories: [(&str, f64); 5] = [
         ("投資信託", fund),
         ("株式", stock),
         ("債券", bond),
+        ("現金", cash_crypto),
+        ("保険", insurance),
     ];
     for (name, value) in categories {
         if value > 0.0 {
@@ -72,10 +74,12 @@ fn parse_mf_csv(content: &str) -> Result<Vec<MfPreviewRow>, String> {
         };
 
         let total = parse_amount(1);
+        let cash_crypto = parse_amount(2); // 預金・現金・暗号資産 → 現金
         let stock = parse_amount(3);       // 株式(現物) → 株式
         let fund = parse_amount(4)         // 投資信託 → 投資信託
                  + parse_amount(7);        // 年金(iDeCo/DC) → 投資信託
         let bond = parse_amount(5);        // 債券 → 債券
+        let insurance = parse_amount(6);   // 保険 → 保険
 
         if total <= 0.0 {
             continue;
@@ -84,7 +88,7 @@ fn parse_mf_csv(content: &str) -> Result<Vec<MfPreviewRow>, String> {
         rows.push(MfPreviewRow {
             date,
             total_jpy: total,
-            breakdown_json: build_breakdown_json(fund, stock, bond),
+            breakdown_json: build_breakdown_json(fund, stock, bond, cash_crypto, insurance),
         });
     }
 
@@ -180,7 +184,7 @@ mod tests {
 
         let breakdown: Vec<serde_json::Value> =
             serde_json::from_str(&rows[0].breakdown_json).unwrap();
-        assert_eq!(breakdown.len(), 3);
+        assert_eq!(breakdown.len(), 5);
 
         // 投資信託 = funds(400) + pension(80)
         assert_eq!(breakdown[0]["name"], "投資信託");
@@ -193,11 +197,19 @@ mod tests {
         // 債券 = 50
         assert_eq!(breakdown[2]["name"], "債券");
         assert_eq!(breakdown[2]["value"].as_f64().unwrap(), 50.0);
+
+        // 現金 = 預金・現金・暗号資産(100)
+        assert_eq!(breakdown[3]["name"], "現金");
+        assert_eq!(breakdown[3]["value"].as_f64().unwrap(), 100.0);
+
+        // 保険 = 20
+        assert_eq!(breakdown[4]["name"], "保険");
+        assert_eq!(breakdown[4]["value"].as_f64().unwrap(), 20.0);
     }
 
     #[test]
     fn no_bond_when_zero() {
-        let json = build_breakdown_json(1000.0, 500.0, 0.0);
+        let json = build_breakdown_json(1000.0, 500.0, 0.0, 0.0, 0.0);
         let parsed: Vec<serde_json::Value> = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.len(), 2);
         assert_eq!(parsed[0]["name"], "投資信託");
