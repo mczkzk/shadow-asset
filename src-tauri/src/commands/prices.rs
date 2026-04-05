@@ -85,7 +85,7 @@ fn asset_class_name(holding_type: &str) -> &'static str {
     }
 }
 
-fn asset_class_color(class_name: &str) -> &'static str {
+pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
     match class_name {
         "投資信託" => "#4F46E5",
         "株式" => "#059669",

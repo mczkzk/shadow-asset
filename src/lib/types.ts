@@ -61,7 +61,7 @@ interface Snapshot {
   breakdown_json: string;
 }
 
-type MfPreviewRow = Omit<Snapshot, "id">;
+interface MfPreviewRow extends Omit<Snapshot, "id"> {}
 
 interface MfImportPreview {
   rows: MfPreviewRow[];

@@ -13,15 +13,6 @@ import { previewMfImport, applyMfImport } from "@/lib/api";
 import { formatJpy } from "@/lib/format";
 import type { Snapshot, MfImportPreview } from "@/lib/types";
 
-const AREA_COLORS: Record<string, string> = {
-  "投資信託": "#4F46E5",
-  "株式": "#059669",
-  "暗号資産": "#D97706",
-  "ゴールド": "#CA8A04",
-  "債券": "#8B5CF6",
-  "その他": "#6B7280",
-};
-
 interface ChartRow {
   date: string;
   [key: string]: string | number;
@@ -30,8 +21,10 @@ interface ChartRow {
 function buildChartData(snapshots: Snapshot[]): {
   data: ChartRow[];
   keys: string[];
+  colors: Record<string, string>;
 } {
   const allKeys = new Set<string>();
+  const colors: Record<string, string> = {};
   const data: ChartRow[] = [];
 
   for (const s of snapshots) {
@@ -40,9 +33,10 @@ function buildChartData(snapshots: Snapshot[]): {
 
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
-        if (item.name && typeof item.value === "number" && item.value > 0) {
+        if (typeof item.name === "string" && typeof item.value === "number" && item.value > 0) {
           row[item.name] = (Number(row[item.name]) || 0) + item.value;
           allKeys.add(item.name);
+          if (typeof item.color === "string") colors[item.name] = item.color;
         }
       }
     }
@@ -59,7 +53,7 @@ function buildChartData(snapshots: Snapshot[]): {
     (a, b) => (keyTotals.get(b) ?? 0) - (keyTotals.get(a) ?? 0)
   );
 
-  return { data, keys };
+  return { data, keys, colors };
 }
 
 export default function AssetHistory({
@@ -88,21 +82,24 @@ export default function AssetHistory({
       const result = await previewMfImport(file);
       setPreview(result);
     } catch (e) {
-      setError(`CSV読込失敗: ${e}`);
+      setError(`CSV読込失敗: ${String(e)}`);
     } finally {
       setImporting(false);
     }
   };
 
   const handleApply = async () => {
-    if (!preview) return;
+    if (!preview || importing) return;
     setError(null);
+    setImporting(true);
     try {
       await applyMfImport(preview.rows);
       setApplied(true);
       reload();
     } catch (e) {
-      setError(`適用失敗: ${e}`);
+      setError(`適用失敗: ${String(e)}`);
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -111,8 +108,8 @@ export default function AssetHistory({
     [snapshots]
   );
 
-  const { data, keys } = useMemo(
-    () => all.length < 2 ? { data: [], keys: [] } : buildChartData(all),
+  const { data, keys, colors } = useMemo(
+    () => all.length < 2 ? { data: [], keys: [], colors: {} } : buildChartData(all),
     [all]
   );
 
@@ -161,9 +158,10 @@ export default function AssetHistory({
               {!applied && preview.rows.length > 0 && (
                 <button
                   onClick={handleApply}
-                  className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                  disabled={importing}
+                  className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  適用する
+                  {importing ? "適用中..." : "適用する"}
                 </button>
               )}
               <button
@@ -176,7 +174,7 @@ export default function AssetHistory({
           </div>
           {!applied && preview.rows.length > 0 && (
             <div className="mt-2 text-xs text-blue-700">
-              期間: {preview.rows[preview.rows.length - 1].date} ~ {preview.rows[0].date}
+              期間: {preview.rows.reduce((min, r) => r.date < min ? r.date : min, preview.rows[0].date)} ~ {preview.rows.reduce((max, r) => r.date > max ? r.date : max, preview.rows[0].date)}
             </div>
           )}
         </div>
@@ -213,8 +211,8 @@ export default function AssetHistory({
                   type="monotone"
                   dataKey={key}
                   stackId="1"
-                  stroke={AREA_COLORS[key] ?? "#6B7280"}
-                  fill={AREA_COLORS[key] ?? "#6B7280"}
+                  stroke={colors[key] ?? "#6B7280"}
+                  fill={colors[key] ?? "#6B7280"}
                   fillOpacity={0.7}
                 />
               ))}

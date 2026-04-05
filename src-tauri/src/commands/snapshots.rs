@@ -31,6 +31,9 @@ pub fn get_snapshots(state: State<AppState>, days: Option<i64>) -> Result<Vec<Sn
     let conn = db.as_ref().ok_or("database not initialized")?;
 
     if let Some(days) = days {
+        if days <= 0 {
+            return Err("days must be positive".into());
+        }
         let offset = format!("-{} days", days);
         let mut stmt = conn
             .prepare(

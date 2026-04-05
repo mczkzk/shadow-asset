@@ -36,7 +36,7 @@ function useSnapshots(days?: number, refreshCount = 0) {
   const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
-    // Skip the re-fetch triggered by initial load's refreshCount change
+    // Skip the 0→1 refreshCount bump from initial fetchPortfolio (reloadCount uses a separate counter)
     if (prevCount.current === 0 && refreshCount === 1) {
       prevCount.current = refreshCount;
       return;

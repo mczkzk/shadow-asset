@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::AppState;
 use super::csv_import::read_shift_jis;
+use super::prices::asset_class_color;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MfImportPreview {
@@ -26,20 +27,18 @@ pub struct MfImportResult {
 
 fn build_breakdown_json(fund: f64, stock: f64, bond: f64) -> String {
     let mut items = Vec::new();
-    if fund > 0.0 {
-        items.push(format!(
-            r##"{{"name":"投資信託","type":"投資信託","value":{fund},"color":"#4F46E5"}}"##
-        ));
-    }
-    if stock > 0.0 {
-        items.push(format!(
-            r##"{{"name":"株式","type":"株式","value":{stock},"color":"#059669"}}"##
-        ));
-    }
-    if bond > 0.0 {
-        items.push(format!(
-            r##"{{"name":"債券","type":"債券","value":{bond},"color":"#8B5CF6"}}"##
-        ));
+    let categories: [(&str, f64); 3] = [
+        ("投資信託", fund),
+        ("株式", stock),
+        ("債券", bond),
+    ];
+    for (name, value) in categories {
+        if value > 0.0 {
+            let color = asset_class_color(name);
+            items.push(format!(
+                r##"{{"name":"{name}","type":"{name}","value":{value},"color":"{color}"}}"##
+            ));
+        }
     }
     format!("[{}]", items.join(","))
 }
@@ -170,30 +169,30 @@ mod tests {
     #[test]
     fn parse_mf_csv_basic() {
         let csv = r#""日付","合計（円）","預金・現金・暗号資産（円）","株式(現物)（円）","投資信託（円）","債券（円）","保険（円）","年金（円）","ポイント（円）","その他の資産（円）"
-"2026/04/04","10000000","1000000","3000000","4000000","500000","200000","800000","100","500000"
-"2026/04/03","9500000","900000","2800000","3900000","0","200000","750000","50","450000""#;
+"2026/04/04","1000","100","300","400","50","20","80","10","40"
+"2026/04/03","950","90","280","390","0","20","75","5","45""#;
 
         let rows = parse_mf_csv(csv).unwrap();
         assert_eq!(rows.len(), 2);
 
         assert_eq!(rows[0].date, "2026-04-04");
-        assert_eq!(rows[0].total_jpy, 10000000.0);
+        assert_eq!(rows[0].total_jpy, 1000.0);
 
         let breakdown: Vec<serde_json::Value> =
             serde_json::from_str(&rows[0].breakdown_json).unwrap();
         assert_eq!(breakdown.len(), 3);
 
-        // 投資信託 = funds(4000000) + pension(800000)
+        // 投資信託 = funds(400) + pension(80)
         assert_eq!(breakdown[0]["name"], "投資信託");
-        assert_eq!(breakdown[0]["value"].as_f64().unwrap(), 4000000.0 + 800000.0);
+        assert_eq!(breakdown[0]["value"].as_f64().unwrap(), 400.0 + 80.0);
 
-        // 株式 = stocks(3000000)
+        // 株式 = stocks(300)
         assert_eq!(breakdown[1]["name"], "株式");
-        assert_eq!(breakdown[1]["value"].as_f64().unwrap(), 3000000.0);
+        assert_eq!(breakdown[1]["value"].as_f64().unwrap(), 300.0);
 
-        // 債券 = 500000
+        // 債券 = 50
         assert_eq!(breakdown[2]["name"], "債券");
-        assert_eq!(breakdown[2]["value"].as_f64().unwrap(), 500000.0);
+        assert_eq!(breakdown[2]["value"].as_f64().unwrap(), 50.0);
     }
 
     #[test]
