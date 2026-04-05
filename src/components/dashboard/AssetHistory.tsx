@@ -56,6 +56,28 @@ function buildChartData(snapshots: Snapshot[]): {
   return { data, keys, colors };
 }
 
+type Period = "1m" | "3m" | "6m" | "1y" | "all";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "1m", label: "1ヶ月" },
+  { key: "3m", label: "3ヶ月" },
+  { key: "6m", label: "6ヶ月" },
+  { key: "1y", label: "1年" },
+  { key: "all", label: "全期間" },
+];
+
+function periodStartDate(period: Period): string | null {
+  if (period === "all") return null;
+  const d = new Date();
+  switch (period) {
+    case "1m": d.setMonth(d.getMonth() - 1); break;
+    case "3m": d.setMonth(d.getMonth() - 3); break;
+    case "6m": d.setMonth(d.getMonth() - 6); break;
+    case "1y": d.setFullYear(d.getFullYear() - 1); break;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
 export default function AssetHistory({
   refreshCount = 0,
 }: {
@@ -66,6 +88,7 @@ export default function AssetHistory({
   const [importing, setImporting] = useState(false);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<Period>("all");
 
   const handlePickCsv = async () => {
     const file = await open({
@@ -108,9 +131,15 @@ export default function AssetHistory({
     [snapshots]
   );
 
+  const filtered = useMemo(() => {
+    const start = periodStartDate(period);
+    if (!start) return all;
+    return all.filter((s) => s.date >= start);
+  }, [all, period]);
+
   const { data, keys, colors } = useMemo(
-    () => all.length < 2 ? { data: [], keys: [], colors: {} } : buildChartData(all),
-    [all]
+    () => filtered.length < 2 ? { data: [], keys: [], colors: {} } : buildChartData(filtered),
+    [filtered]
   );
 
   if (isLoading) {
@@ -121,19 +150,36 @@ export default function AssetHistory({
     );
   }
 
-  const emptyState = all.length < 2;
+  const emptyState = filtered.length < 2;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-700">資産推移</h2>
-        <button
-          onClick={handlePickCsv}
-          disabled={importing}
-          className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-50"
-        >
-          {importing ? "読込中..." : "MF CSV取込"}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded border border-zinc-200">
+            {PERIODS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setPeriod(key)}
+                className={`px-2 py-1 text-xs ${
+                  period === key
+                    ? "bg-zinc-700 text-white"
+                    : "text-zinc-500 hover:bg-zinc-50"
+                } ${key !== "1m" ? "border-l border-zinc-200" : ""}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handlePickCsv}
+            disabled={importing}
+            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-50"
+          >
+            {importing ? "読込中..." : "MF CSV取込"}
+          </button>
+        </div>
       </div>
 
       {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
