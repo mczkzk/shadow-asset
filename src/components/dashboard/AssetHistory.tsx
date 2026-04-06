@@ -250,7 +250,7 @@ export default function AssetHistory({
       ) : (
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+            <AreaChart key={period} data={data}>
               <XAxis
                 dataKey="ts"
                 type="number"
