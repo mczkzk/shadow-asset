@@ -13,6 +13,7 @@ function unitLabel(holdingType: string): string {
 interface AccountListProps {
   accounts: AccountWithHoldings[];
   prevDate: string | null;
+  showChange: boolean;
 }
 
 const HOLDING_GROUP_LABELS: Record<string, string> = {
@@ -69,8 +70,8 @@ function groupHoldings(
     }));
 }
 
-function HoldingRow({ h, prevDate }: { h: HoldingWithValue; prevDate: string | null }) {
-  const diff = h.value_jpy != null && h.prev_value_jpy != null
+function HoldingRow({ h, prevDate, showChange }: { h: HoldingWithValue; prevDate: string | null; showChange: boolean }) {
+  const diff = showChange && h.value_jpy != null && h.prev_value_jpy != null
     ? formatChange(h.value_jpy, h.prev_value_jpy)
     : null;
 
@@ -121,7 +122,7 @@ function HoldingRow({ h, prevDate }: { h: HoldingWithValue; prevDate: string | n
   );
 }
 
-export default function AccountList({ accounts, prevDate }: AccountListProps) {
+export default function AccountList({ accounts, prevDate, showChange }: AccountListProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold text-zinc-700">口座別詳細</h2>
@@ -157,7 +158,7 @@ export default function AccountList({ accounts, prevDate }: AccountListProps) {
                 )}
                 <div className="divide-y divide-zinc-50">
                   {group.items.map((h) => (
-                    <HoldingRow key={h.id} h={h} prevDate={prevDate} />
+                    <HoldingRow key={h.id} h={h} prevDate={prevDate} showChange={showChange} />
                   ))}
                 </div>
               </div>
