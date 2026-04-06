@@ -5,6 +5,7 @@ interface TotalAssetsProps {
   usdJpy: number;
   prevTotalJpy: number | null;
   prevDate: string | null;
+  showChange: boolean;
 }
 
 export default function TotalAssets({
@@ -12,6 +13,7 @@ export default function TotalAssets({
   usdJpy,
   prevTotalJpy,
   prevDate,
+  showChange,
 }: TotalAssetsProps) {
   const diff = prevTotalJpy != null ? formatChange(totalJpy, prevTotalJpy) : null;
 
@@ -21,7 +23,7 @@ export default function TotalAssets({
       <p className="mt-1 text-3xl font-bold tracking-tight">
         {formatJpy(totalJpy)}
       </p>
-      {diff && (
+      {diff && showChange && (
         <p className="mt-1 text-sm font-medium opacity-90">
           <span className={diff.change >= 0 ? "text-emerald-300" : "text-red-300"}>
             {diff.sign}{formatJpy(diff.change)} ({diff.sign}{formatPercent(diff.pct, 2)})
