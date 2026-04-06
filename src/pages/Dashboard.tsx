@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { formatChange } from "@/lib/format";
 import TotalAssets from "@/components/dashboard/TotalAssets";
@@ -11,9 +11,15 @@ const CRASH_THRESHOLD_PCT = -5;
 
 export default function Dashboard() {
   const { data, isLoading, error, refresh, refreshCount } = usePortfolio();
-  const isCrash = data?.prev_total_jpy != null
-    && formatChange(data.total_jpy, data.prev_total_jpy).pct <= CRASH_THRESHOLD_PCT;
-  const [showChange, setShowChange] = useState(!isCrash);
+  const [showChange, setShowChange] = useState(true);
+  const [crashChecked, setCrashChecked] = useState(false);
+
+  useEffect(() => {
+    if (crashChecked || data?.prev_total_jpy == null) return;
+    const isCrash = formatChange(data.total_jpy, data.prev_total_jpy).pct <= CRASH_THRESHOLD_PCT;
+    if (isCrash) setShowChange(false);
+    setCrashChecked(true);
+  }, [data, crashChecked]);
 
   if (isLoading) {
     return (
@@ -58,11 +64,12 @@ export default function Dashboard() {
             更新
           </button>
           {data.prev_total_jpy != null && (
-            <label className="flex cursor-pointer items-center gap-2">
+            <div className="flex cursor-pointer items-center gap-2">
               <span className="text-xs text-zinc-500">前日比</span>
               <button
                 role="switch"
                 aria-checked={showChange}
+                aria-label="前日比の表示切替"
                 onClick={() => setShowChange((v) => !v)}
                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                   showChange ? "bg-indigo-500" : "bg-zinc-300"
@@ -74,7 +81,7 @@ export default function Dashboard() {
                   }`}
                 />
               </button>
-            </label>
+            </div>
           )}
         </div>
       </div>
