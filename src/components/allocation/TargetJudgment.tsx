@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { formatJpy } from "@/lib/format";
 import { getSetting, setSetting } from "@/lib/api";
 
-interface TargetRow {
-  label: string;
-  target: number;
-  actual: number;
-  description: string;
-}
-
 function DiffBadge({ diff }: { diff: number }) {
   if (diff >= 0) {
     return (
@@ -47,12 +40,13 @@ interface MonthSelectRowProps {
   months: number;
   actual: number;
   expense: number;
+  options?: readonly number[];
   onMonthsChange: (months: number) => void;
 }
 
 const MONTH_OPTIONS = [0, 6, 12, 24, 36] as const;
 
-function MonthSelectRow({ label, months, actual, expense, onMonthsChange }: MonthSelectRowProps) {
+function MonthSelectRow({ label, months, actual, expense, options = MONTH_OPTIONS, onMonthsChange }: MonthSelectRowProps) {
   const target = expense * 10000 * months;
   const diff = actual - target;
   return (
@@ -65,7 +59,7 @@ function MonthSelectRow({ label, months, actual, expense, onMonthsChange }: Mont
             onChange={(e) => onMonthsChange(Number(e.target.value))}
             className="rounded border border-zinc-200 px-1.5 py-0.5 text-xs text-zinc-500"
           >
-            {MONTH_OPTIONS.map((m) => (
+            {options.map((m) => (
               <option key={m} value={m}>
                 {m === 0 ? "判定しない" : `生活費 × ${m}ヶ月`}
               </option>
@@ -95,20 +89,23 @@ export default function TargetJudgment({
   const [monthlyExpense, setMonthlyExpense] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [emergencyMonths, setEmergencyMonths] = useState<number>(6);
   const [cashMonths, setCashMonths] = useState<number>(12);
   const [govBondMonths, setGovBondMonths] = useState<number>(0);
 
   useEffect(() => {
     Promise.all([
       getSetting("monthly_expense"),
+      getSetting("emergency_fund_months"),
       getSetting("cash_position_months"),
       getSetting("gov_bond_months"),
-    ]).then(([expense, cash, bond]) => {
+    ]).then(([expense, emergency, cash, bond]) => {
       if (expense != null) {
         const num = Number(expense);
         setMonthlyExpense(num);
         setInputValue(String(num));
       }
+      if (emergency != null) setEmergencyMonths(Number(emergency));
       if (cash != null) setCashMonths(Number(cash));
       if (bond != null) setGovBondMonths(Number(bond));
     });
@@ -122,14 +119,9 @@ export default function TargetJudgment({
     setIsEditing(false);
   }, [inputValue]);
 
-  const handleCashMonthsChange = useCallback(async (months: number) => {
-    setCashMonths(months);
-    await setSetting("cash_position_months", String(months));
-  }, []);
-
-  const handleGovBondMonthsChange = useCallback(async (months: number) => {
-    setGovBondMonths(months);
-    await setSetting("gov_bond_months", String(months));
+  const handleMonthsChange = useCallback(async (key: string, setter: (v: number) => void, months: number) => {
+    setter(months);
+    await setSetting(key, String(months));
   }, []);
 
   if (monthlyExpense == null && !isEditing) {
@@ -152,20 +144,8 @@ export default function TargetJudgment({
   }
 
   const expense = monthlyExpense ?? 0;
-  const targets: TargetRow[] = [
-    {
-      label: "生活防衛資金",
-      target: expense * 10000 * 6,
-      actual: emergencyFundActual,
-      description: "生活費 × 6ヶ月",
-    },
-    {
-      label: "FIRE目標額",
-      target: expense * 10000 * 12 * 25,
-      actual: totalExcludingEmergency,
-      description: "年間生活費 × 25年 (4%ルール)",
-    },
-  ];
+  const fireTarget = expense * 10000 * 12 * 25;
+  const fireDiff = totalExcludingEmergency - fireTarget;
 
   return (
     <div className="h-full rounded-xl border border-zinc-200 bg-white p-6">
@@ -210,32 +190,32 @@ export default function TargetJudgment({
       </div>
 
       <div className="mt-4 space-y-3">
-        {targets.map((row) => {
-          const diff = row.actual - row.target;
-          return (
-            <div key={row.label}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-medium text-zinc-700">
-                    {row.label}
-                  </span>
-                  <span className="ml-2 text-xs text-zinc-400">
-                    {row.description}
-                  </span>
-                </div>
-                <DiffBadge diff={diff} />
-              </div>
-              <ProgressBar actual={row.actual} target={row.target} />
+        <div>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-zinc-700">FIRE目標額</span>
+              <span className="ml-2 text-xs text-zinc-400">年間生活費 × 25年 (4%ルール)</span>
             </div>
-          );
-        })}
+            <DiffBadge diff={fireDiff} />
+          </div>
+          <ProgressBar actual={totalExcludingEmergency} target={fireTarget} />
+        </div>
+
+        <MonthSelectRow
+          label="生活防衛資金"
+          months={emergencyMonths}
+          actual={emergencyFundActual}
+          expense={expense}
+          options={[0, 3, 6, 9, 12]}
+          onMonthsChange={(m) => handleMonthsChange("emergency_fund_months", setEmergencyMonths, m)}
+        />
 
         <MonthSelectRow
           label="現金ポジション"
           months={cashMonths}
           actual={cashActual}
           expense={expense}
-          onMonthsChange={handleCashMonthsChange}
+          onMonthsChange={(m) => handleMonthsChange("cash_position_months", setCashMonths, m)}
         />
 
         <MonthSelectRow
@@ -243,7 +223,7 @@ export default function TargetJudgment({
           months={govBondMonths}
           actual={govBondActual}
           expense={expense}
-          onMonthsChange={handleGovBondMonthsChange}
+          onMonthsChange={(m) => handleMonthsChange("gov_bond_months", setGovBondMonths, m)}
         />
       </div>
     </div>
