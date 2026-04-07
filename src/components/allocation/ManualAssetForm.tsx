@@ -62,6 +62,7 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
 ];
 
 const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "AUD", "CHF", "CAD", "NZD"];
+const GOV_BOND_NAME_OPTIONS = ["変動10年", "固定5年", "固定3年"];
 
 interface ManualAssetFormProps {
   initial?: ManualAsset;
@@ -70,7 +71,7 @@ interface ManualAssetFormProps {
 }
 
 export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAssetFormProps) {
-  const [name, setName] = useState(initial?.name ?? "");
+  const [name, setName] = useState(initial?.name ?? (initial?.asset_class === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : ""));
   const [assetClass, setAssetClass] = useState(initial?.asset_class ?? "現金");
   const [valueJpy, setValueJpy] = useState(initial?.value_jpy?.toString() ?? "");
   const [currency, setCurrency] = useState(initial?.currency ?? "USD");
@@ -80,6 +81,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
 
   const option = ASSET_CLASS_OPTIONS.find((o) => o.value === assetClass) ?? ASSET_CLASS_OPTIONS[0];
   const isForeign = assetClass === "外貨預金";
+  const isGovBond = assetClass === "個人向け国債";
   const autoName = assetClass === "生活防衛資金";
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,7 +113,10 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
         <label className="text-xs font-medium text-zinc-500">資産クラス</label>
         <select
           value={assetClass}
-          onChange={(e) => setAssetClass(e.target.value)}
+          onChange={(e) => {
+            setAssetClass(e.target.value);
+            setName(e.target.value === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : "");
+          }}
           className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
         >
           {ASSET_CLASS_OPTIONS.map((o) => (
@@ -123,14 +128,26 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
 
       {!autoName && (
         <div>
-          <label className="text-xs font-medium text-zinc-500">名前</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={option.namePlaceholder}
-            className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-          />
+          <label className="text-xs font-medium text-zinc-500">{isGovBond ? "種類" : "名前"}</label>
+          {isGovBond ? (
+            <select
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            >
+              {GOV_BOND_NAME_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={option.namePlaceholder}
+              className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            />
+          )}
         </div>
       )}
 
