@@ -111,8 +111,9 @@ export default function Allocation() {
   const hasSnapshots = data.snapshot_date != null;
 
   // 生活防衛資金をチャート・テーブルから除外
-  const emergencyFund = data.items.find((i) => i.name === "生活防衛資金");
-  const emergencyFundValue = emergencyFund?.value ?? 0;
+  const emergencyFundValue = data.items.find((i) => i.name === "生活防衛資金")?.value ?? 0;
+  const cashValue = data.items.find((i) => i.name === "現金")?.value ?? 0;
+  const govBondValue = data.items.find((i) => i.name === "個人向け国債")?.value ?? 0;
   const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
   const filteredTotal = data.total_jpy - emergencyFundValue;
   const filteredManualAssets = data.manual_assets.filter(
@@ -152,8 +153,8 @@ export default function Allocation() {
             </div>
             <TargetJudgment
               emergencyFundActual={emergencyFundValue}
-              cashActual={data.items.find((i) => i.name === "現金")?.value ?? 0}
-              govBondActual={data.items.find((i) => i.name === "個人向け国債")?.value ?? 0}
+              cashActual={cashValue}
+              govBondActual={govBondValue}
               totalExcludingEmergency={filteredTotal}
             />
           </div>

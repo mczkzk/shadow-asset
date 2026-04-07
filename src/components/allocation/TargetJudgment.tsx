@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { formatJpy } from "@/lib/format";
 import { getSetting, setSetting } from "@/lib/api";
 
+const SETTING_KEYS = {
+  MONTHLY_EXPENSE: "monthly_expense",
+  EMERGENCY_FUND_MONTHS: "emergency_fund_months",
+  CASH_POSITION_MONTHS: "cash_position_months",
+  GOV_BOND_MONTHS: "gov_bond_months",
+} as const;
+
 function DiffBadge({ diff }: { diff: number }) {
   if (diff >= 0) {
     return (
@@ -94,27 +101,27 @@ export default function TargetJudgment({
   const [govBondMonths, setGovBondMonths] = useState<number>(0);
 
   useEffect(() => {
-    Promise.all([
-      getSetting("monthly_expense"),
-      getSetting("emergency_fund_months"),
-      getSetting("cash_position_months"),
-      getSetting("gov_bond_months"),
+    Promise.allSettled([
+      getSetting(SETTING_KEYS.MONTHLY_EXPENSE),
+      getSetting(SETTING_KEYS.EMERGENCY_FUND_MONTHS),
+      getSetting(SETTING_KEYS.CASH_POSITION_MONTHS),
+      getSetting(SETTING_KEYS.GOV_BOND_MONTHS),
     ]).then(([expense, emergency, cash, bond]) => {
-      if (expense != null) {
-        const num = Number(expense);
+      if (expense.status === "fulfilled" && expense.value != null) {
+        const num = Number(expense.value);
         setMonthlyExpense(num);
         setInputValue(String(num));
       }
-      if (emergency != null) setEmergencyMonths(Number(emergency));
-      if (cash != null) setCashMonths(Number(cash));
-      if (bond != null) setGovBondMonths(Number(bond));
+      if (emergency.status === "fulfilled" && emergency.value != null) setEmergencyMonths(Number(emergency.value));
+      if (cash.status === "fulfilled" && cash.value != null) setCashMonths(Number(cash.value));
+      if (bond.status === "fulfilled" && bond.value != null) setGovBondMonths(Number(bond.value));
     });
   }, []);
 
   const save = useCallback(async () => {
     const num = Number(inputValue);
     if (Number.isNaN(num) || num <= 0) return;
-    await setSetting("monthly_expense", String(num));
+    await setSetting(SETTING_KEYS.MONTHLY_EXPENSE, String(num));
     setMonthlyExpense(num);
     setIsEditing(false);
   }, [inputValue]);
@@ -207,7 +214,7 @@ export default function TargetJudgment({
           actual={emergencyFundActual}
           expense={expense}
           options={[0, 3, 6, 9, 12]}
-          onMonthsChange={(m) => handleMonthsChange("emergency_fund_months", setEmergencyMonths, m)}
+          onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.EMERGENCY_FUND_MONTHS, setEmergencyMonths, m)}
         />
 
         <MonthSelectRow
@@ -215,7 +222,7 @@ export default function TargetJudgment({
           months={cashMonths}
           actual={cashActual}
           expense={expense}
-          onMonthsChange={(m) => handleMonthsChange("cash_position_months", setCashMonths, m)}
+          onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.CASH_POSITION_MONTHS, setCashMonths, m)}
         />
 
         <MonthSelectRow
@@ -223,7 +230,7 @@ export default function TargetJudgment({
           months={govBondMonths}
           actual={govBondActual}
           expense={expense}
-          onMonthsChange={(m) => handleMonthsChange("gov_bond_months", setGovBondMonths, m)}
+          onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.GOV_BOND_MONTHS, setGovBondMonths, m)}
         />
       </div>
     </div>
