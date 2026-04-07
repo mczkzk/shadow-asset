@@ -115,6 +115,7 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
         "現金" => "#10B981",
         "外貨預金" => "#06B6D4",
         "生活防衛資金" => "#84CC16",
+        "個人向け国債" => "#7C3AED",
         _ => "#6B7280",
     }
 }

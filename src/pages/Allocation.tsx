@@ -153,6 +153,7 @@ export default function Allocation() {
             <TargetJudgment
               emergencyFundActual={emergencyFundValue}
               cashActual={data.items.find((i) => i.name === "現金")?.value ?? 0}
+              govBondActual={data.items.find((i) => i.name === "個人向け国債")?.value ?? 0}
               totalExcludingEmergency={filteredTotal}
             />
           </div>

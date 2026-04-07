@@ -44,6 +44,14 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
     amountPlaceholder: "例: 2000000",
   },
   {
+    value: "個人向け国債",
+    label: "個人向け国債",
+    description: "個人向け国債(変動10年など)。元本保証の安全資産",
+    namePlaceholder: "例: 個人向け国債 変動10年",
+    amountLabel: "額面(円)",
+    amountPlaceholder: "例: 1000000",
+  },
+  {
     value: "生活防衛資金",
     label: "生活防衛資金",
     description: "生活費の3〜6ヶ月分など、投資に回さない別枠の現金",

@@ -24,37 +24,93 @@ function DiffBadge({ diff }: { diff: number }) {
   );
 }
 
+function ProgressBar({ actual, target }: { actual: number; target: number }) {
+  const diff = actual - target;
+  const progress = target > 0 ? Math.min(actual / target, 1) : 0;
+  return (
+    <div className="mt-1 flex items-center gap-3">
+      <div className="h-2 flex-1 rounded-full bg-zinc-100">
+        <div
+          className={`h-2 rounded-full ${diff >= 0 ? "bg-emerald-500" : "bg-amber-400"}`}
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
+      <div className="w-48 text-right text-xs text-zinc-500">
+        {formatJpy(actual)} / {formatJpy(target)}
+      </div>
+    </div>
+  );
+}
+
+interface MonthSelectRowProps {
+  label: string;
+  months: number;
+  actual: number;
+  expense: number;
+  onMonthsChange: (months: number) => void;
+}
+
+const MONTH_OPTIONS = [0, 6, 12, 24, 36] as const;
+
+function MonthSelectRow({ label, months, actual, expense, onMonthsChange }: MonthSelectRowProps) {
+  const target = expense * 10000 * months;
+  const diff = actual - target;
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-zinc-700">{label}</span>
+          <select
+            value={months}
+            onChange={(e) => onMonthsChange(Number(e.target.value))}
+            className="rounded border border-zinc-200 px-1.5 py-0.5 text-xs text-zinc-500"
+          >
+            {MONTH_OPTIONS.map((m) => (
+              <option key={m} value={m}>
+                {m === 0 ? "判定しない" : `生活費 × ${m}ヶ月`}
+              </option>
+            ))}
+          </select>
+        </div>
+        {months > 0 && <DiffBadge diff={diff} />}
+      </div>
+      {months > 0 && <ProgressBar actual={actual} target={target} />}
+    </div>
+  );
+}
+
 interface TargetJudgmentProps {
   emergencyFundActual: number;
   cashActual: number;
+  govBondActual: number;
   totalExcludingEmergency: number;
 }
-
-const CASH_MONTH_OPTIONS = [0, 6, 12, 24, 36] as const;
 
 export default function TargetJudgment({
   emergencyFundActual,
   cashActual,
+  govBondActual,
   totalExcludingEmergency,
 }: TargetJudgmentProps) {
   const [monthlyExpense, setMonthlyExpense] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [cashMonths, setCashMonths] = useState<number>(12);
+  const [govBondMonths, setGovBondMonths] = useState<number>(0);
 
   useEffect(() => {
     Promise.all([
       getSetting("monthly_expense"),
       getSetting("cash_position_months"),
-    ]).then(([expense, months]) => {
+      getSetting("gov_bond_months"),
+    ]).then(([expense, cash, bond]) => {
       if (expense != null) {
         const num = Number(expense);
         setMonthlyExpense(num);
         setInputValue(String(num));
       }
-      if (months != null) {
-        setCashMonths(Number(months));
-      }
+      if (cash != null) setCashMonths(Number(cash));
+      if (bond != null) setGovBondMonths(Number(bond));
     });
   }, []);
 
@@ -69,6 +125,11 @@ export default function TargetJudgment({
   const handleCashMonthsChange = useCallback(async (months: number) => {
     setCashMonths(months);
     await setSetting("cash_position_months", String(months));
+  }, []);
+
+  const handleGovBondMonthsChange = useCallback(async (months: number) => {
+    setGovBondMonths(months);
+    await setSetting("gov_bond_months", String(months));
   }, []);
 
   if (monthlyExpense == null && !isEditing) {
@@ -106,12 +167,8 @@ export default function TargetJudgment({
     },
   ];
 
-  const cashTarget = expense * 10000 * cashMonths;
-  const cashDiff = cashActual - cashTarget;
-  const cashProgress = cashTarget > 0 ? Math.min(cashActual / cashTarget, 1) : 0;
-
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6">
+    <div className="h-full rounded-xl border border-zinc-200 bg-white p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-700">目標判定</h2>
         {isEditing ? (
@@ -155,7 +212,6 @@ export default function TargetJudgment({
       <div className="mt-4 space-y-3">
         {targets.map((row) => {
           const diff = row.actual - row.target;
-          const progress = row.target > 0 ? Math.min(row.actual / row.target, 1) : 0;
           return (
             <div key={row.label}>
               <div className="flex items-center justify-between">
@@ -169,56 +225,26 @@ export default function TargetJudgment({
                 </div>
                 <DiffBadge diff={diff} />
               </div>
-              <div className="mt-1 flex items-center gap-3">
-                <div className="h-2 flex-1 rounded-full bg-zinc-100">
-                  <div
-                    className={`h-2 rounded-full ${diff >= 0 ? "bg-emerald-500" : "bg-amber-400"}`}
-                    style={{ width: `${progress * 100}%` }}
-                  />
-                </div>
-                <div className="w-48 text-right text-xs text-zinc-500">
-                  {formatJpy(row.actual)} / {formatJpy(row.target)}
-                </div>
-              </div>
+              <ProgressBar actual={row.actual} target={row.target} />
             </div>
           );
         })}
 
-        {/* Cash position with selectable months */}
-        <div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-zinc-700">
-                現金ポジション
-              </span>
-              <select
-                value={cashMonths}
-                onChange={(e) => handleCashMonthsChange(Number(e.target.value))}
-                className="rounded border border-zinc-200 px-1.5 py-0.5 text-xs text-zinc-500"
-              >
-                {CASH_MONTH_OPTIONS.map((m) => (
-                  <option key={m} value={m}>
-                    {m === 0 ? "判定しない" : `生活費 × ${m}ヶ月`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {cashMonths > 0 && <DiffBadge diff={cashDiff} />}
-          </div>
-          {cashMonths > 0 && (
-            <div className="mt-1 flex items-center gap-3">
-              <div className="h-2 flex-1 rounded-full bg-zinc-100">
-                <div
-                  className={`h-2 rounded-full ${cashDiff >= 0 ? "bg-emerald-500" : "bg-amber-400"}`}
-                  style={{ width: `${cashProgress * 100}%` }}
-                />
-              </div>
-              <div className="w-48 text-right text-xs text-zinc-500">
-                {formatJpy(cashActual)} / {formatJpy(cashTarget)}
-              </div>
-            </div>
-          )}
-        </div>
+        <MonthSelectRow
+          label="現金ポジション"
+          months={cashMonths}
+          actual={cashActual}
+          expense={expense}
+          onMonthsChange={handleCashMonthsChange}
+        />
+
+        <MonthSelectRow
+          label="個人向け国債"
+          months={govBondMonths}
+          actual={govBondActual}
+          expense={expense}
+          onMonthsChange={handleGovBondMonthsChange}
+        />
       </div>
     </div>
   );
