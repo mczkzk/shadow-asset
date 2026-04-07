@@ -259,7 +259,8 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
     // Import settings
     for s in &data.settings {
         tx.execute(
-            "INSERT INTO settings (key, value) VALUES (?1, ?2)",
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             params![s.key, s.value],
         )
         .map_err(|e| e.to_string())?;

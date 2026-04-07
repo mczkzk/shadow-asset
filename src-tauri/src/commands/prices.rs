@@ -97,6 +97,7 @@ pub(crate) fn asset_class_name(holding_type: &str) -> &'static str {
 pub(crate) fn dashboard_category(asset_class: &str) -> &str {
     match asset_class {
         "現金" | "生活防衛資金" | "外貨預金" | "暗号資産" => "預金・現金・暗号資産",
+        "個人向け国債" => "債券",
         other => other,
     }
 }
