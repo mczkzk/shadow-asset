@@ -136,3 +136,12 @@ export function updateManualAsset(request: ManualAsset): Promise<void> {
 export function deleteManualAsset(id: number): Promise<void> {
   return invoke("delete_manual_asset", { id });
 }
+
+// Settings
+export function getSetting(key: string): Promise<string | null> {
+  return invoke("get_setting", { key });
+}
+
+export function setSetting(key: string, value: string): Promise<void> {
+  return invoke("set_setting", { key, value });
+}
