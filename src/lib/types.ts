@@ -116,7 +116,7 @@ interface ManualAssetWithJpy extends ManualAsset {
   converted_jpy: number | null;
 }
 
-const MANUAL_ASSET_CLASS_ORDER = ["現金", "外貨預金", "不動産", "保険", "生活防衛資金"] as const;
+const MANUAL_ASSET_CLASS_ORDER = ["現金", "個人向け国債", "外貨預金", "不動産", "保険", "生活防衛資金"] as const;
 
 function getManualAssetJpy(a: ManualAssetWithJpy): number {
   return a.converted_jpy ?? a.value_jpy ?? 0;

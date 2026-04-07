@@ -70,5 +70,13 @@ pub fn initialize(app_handle: &AppHandle) -> Connection {
     )
     .expect("failed to create manual_assets table");
 
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );",
+    )
+    .expect("failed to create settings table");
+
     conn
 }

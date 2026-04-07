@@ -3,6 +3,7 @@ import { getManualAssetJpy } from "@/lib/types";
 import { useAllocation } from "@/hooks/useAllocation";
 import { formatJpy, formatNumber, formatPercent } from "@/lib/format";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
+import TargetJudgment from "@/components/allocation/TargetJudgment";
 
 function AllocationTable({
   items,
@@ -109,6 +110,16 @@ export default function Allocation() {
 
   const hasSnapshots = data.snapshot_date != null;
 
+  // 生活防衛資金をチャート・テーブルから除外
+  const emergencyFundValue = data.items.find((i) => i.name === "生活防衛資金")?.value ?? 0;
+  const cashValue = data.items.find((i) => i.name === "現金")?.value ?? 0;
+  const govBondValue = data.items.find((i) => i.name === "個人向け国債")?.value ?? 0;
+  const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
+  const filteredTotal = data.total_jpy - emergencyFundValue;
+  const filteredManualAssets = data.manual_assets.filter(
+    (a) => a.asset_class !== "生活防衛資金",
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -130,16 +141,29 @@ export default function Allocation() {
         </button>
       </div>
 
-      {data.items.length > 0 && (
+      {filteredItems.length > 0 && (
         <>
-          <div className="w-1/2">
-            <CategoryBreakdownChart
-              breakdown={data.items}
-              totalJpy={data.total_jpy}
-              title="アセットアロケーション"
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="[&>div]:h-full">
+              <CategoryBreakdownChart
+                breakdown={filteredItems}
+                totalJpy={filteredTotal}
+                title="アセットアロケーション"
+              />
+            </div>
+            <TargetJudgment
+              emergencyFundActual={emergencyFundValue}
+              cashActual={cashValue}
+              govBondActual={govBondValue}
+              totalExcludingEmergency={filteredTotal}
             />
           </div>
-          <AllocationTable items={data.items} totalJpy={data.total_jpy} manualAssets={data.manual_assets} />
+          {emergencyFundValue > 0 && (
+            <p className="text-xs text-zinc-400">
+              ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外しています
+            </p>
+          )}
+          <AllocationTable items={filteredItems} totalJpy={filteredTotal} manualAssets={filteredManualAssets} />
         </>
       )}
 

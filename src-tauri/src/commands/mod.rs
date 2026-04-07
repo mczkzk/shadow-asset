@@ -6,4 +6,5 @@ pub mod holdings;
 pub mod manual_assets;
 pub mod mf_import;
 pub mod prices;
+pub mod settings;
 pub mod snapshots;

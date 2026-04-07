@@ -46,6 +46,8 @@ pub fn run() {
             commands::manual_assets::update_manual_asset,
             commands::manual_assets::delete_manual_asset,
             commands::allocation::fetch_allocation,
+            commands::settings::get_setting,
+            commands::settings::set_setting,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

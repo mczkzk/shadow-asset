@@ -148,7 +148,7 @@ pub async fn fetch_allocation(state: State<'_, AppState>) -> Result<AllocationRe
     let total_jpy: f64 = class_totals.values().sum();
 
     let class_order = [
-        "株式", "債券", "ゴールド", "暗号資産", "現金", "外貨預金", "不動産", "保険", "生活防衛資金",
+        "株式", "債券", "ゴールド", "暗号資産", "現金", "個人向け国債", "外貨預金", "不動産", "保険", "生活防衛資金",
     ];
 
     let mut items: Vec<AllocationItem> = class_totals

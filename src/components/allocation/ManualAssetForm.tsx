@@ -44,6 +44,14 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
     amountPlaceholder: "例: 2000000",
   },
   {
+    value: "個人向け国債",
+    label: "個人向け国債",
+    description: "個人向け国債(変動10年など)。元本保証の安全資産",
+    namePlaceholder: "例: 個人向け国債 変動10年",
+    amountLabel: "額面(円)",
+    amountPlaceholder: "例: 1000000",
+  },
+  {
     value: "生活防衛資金",
     label: "生活防衛資金",
     description: "生活費の3〜6ヶ月分など、投資に回さない別枠の現金",
@@ -54,6 +62,7 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
 ];
 
 const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "AUD", "CHF", "CAD", "NZD"];
+const GOV_BOND_NAME_OPTIONS = ["変動10年", "固定5年", "固定3年"];
 
 interface ManualAssetFormProps {
   initial?: ManualAsset;
@@ -62,7 +71,7 @@ interface ManualAssetFormProps {
 }
 
 export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAssetFormProps) {
-  const [name, setName] = useState(initial?.name ?? "");
+  const [name, setName] = useState(initial?.name ?? (initial?.asset_class === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : ""));
   const [assetClass, setAssetClass] = useState(initial?.asset_class ?? "現金");
   const [valueJpy, setValueJpy] = useState(initial?.value_jpy?.toString() ?? "");
   const [currency, setCurrency] = useState(initial?.currency ?? "USD");
@@ -72,10 +81,12 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
 
   const option = ASSET_CLASS_OPTIONS.find((o) => o.value === assetClass) ?? ASSET_CLASS_OPTIONS[0];
   const isForeign = assetClass === "外貨預金";
+  const isGovBond = assetClass === "個人向け国債";
+  const autoName = assetClass === "生活防衛資金";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!autoName && !name.trim()) return;
     if (isForeign && !amount) return;
     if (!isForeign && !valueJpy) return;
 
@@ -83,7 +94,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
     setError(null);
     try {
       await onSave({
-        name: name.trim(),
+        name: autoName ? "生活防衛資金" : name.trim(),
         asset_class: assetClass,
         value_jpy: isForeign ? null : (valueJpy ? Number(valueJpy) : null),
         currency: isForeign ? currency : null,
@@ -102,7 +113,10 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
         <label className="text-xs font-medium text-zinc-500">資産クラス</label>
         <select
           value={assetClass}
-          onChange={(e) => setAssetClass(e.target.value)}
+          onChange={(e) => {
+            setAssetClass(e.target.value);
+            setName(e.target.value === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : "");
+          }}
           className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
         >
           {ASSET_CLASS_OPTIONS.map((o) => (
@@ -112,16 +126,30 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
         <p className="mt-1 text-xs text-zinc-400">{option.description}</p>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-zinc-500">名前</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={option.namePlaceholder}
-          className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-        />
-      </div>
+      {!autoName && (
+        <div>
+          <label className="text-xs font-medium text-zinc-500">{isGovBond ? "種類" : "名前"}</label>
+          {isGovBond ? (
+            <select
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            >
+              {GOV_BOND_NAME_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={option.namePlaceholder}
+              className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            />
+          )}
+        </div>
+      )}
 
       {isForeign ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -168,7 +196,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={saving || !name.trim() || (isForeign ? !amount : !valueJpy)}
+          disabled={saving || (!autoName && !name.trim()) || (isForeign ? !amount : !valueJpy)}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {saving ? "保存中..." : initial ? "更新" : "追加"}

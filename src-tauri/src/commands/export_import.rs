@@ -48,6 +48,12 @@ struct ExportSnapshot {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct ExportSetting {
+    key: String,
+    value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct ExportData {
     version: u32,
     exported_at: String,
@@ -55,6 +61,8 @@ struct ExportData {
     snapshots: Vec<ExportSnapshot>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     manual_assets: Vec<ExportManualAsset>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    settings: Vec<ExportSetting>,
 }
 
 #[tauri::command]
@@ -143,12 +151,28 @@ pub fn export_data(state: State<AppState>, path: String) -> Result<(), String> {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
 
+        let mut settings_stmt = conn
+            .prepare("SELECT key, value FROM settings ORDER BY key")
+            .map_err(|e| e.to_string())?;
+
+        let settings = settings_stmt
+            .query_map([], |row| {
+                Ok(ExportSetting {
+                    key: row.get(0)?,
+                    value: row.get(1)?,
+                })
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+
         let export = ExportData {
             version: 1,
             exported_at: chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string(),
             accounts: export_accounts,
             snapshots,
             manual_assets,
+            settings,
         };
 
         serde_json::to_string_pretty(&export).map_err(|e| e.to_string())?
@@ -178,6 +202,8 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
     tx.execute("DELETE FROM snapshots", [])
         .map_err(|e| e.to_string())?;
     tx.execute("DELETE FROM manual_assets", [])
+        .map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM settings", [])
         .map_err(|e| e.to_string())?;
     tx.execute("DELETE FROM accounts", [])
         .map_err(|e| e.to_string())?;
@@ -226,6 +252,16 @@ pub fn import_data(state: State<AppState>, path: String) -> Result<(), String> {
             "INSERT INTO manual_assets (name, asset_class, value_jpy, currency, amount)
              VALUES (?1, ?2, ?3, ?4, ?5)",
             params![ma.name, ma.asset_class, ma.value_jpy, ma.currency, ma.amount],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    // Import settings
+    for s in &data.settings {
+        tx.execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![s.key, s.value],
         )
         .map_err(|e| e.to_string())?;
     }
