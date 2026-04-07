@@ -80,10 +80,11 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
 
   const option = ASSET_CLASS_OPTIONS.find((o) => o.value === assetClass) ?? ASSET_CLASS_OPTIONS[0];
   const isForeign = assetClass === "外貨預金";
+  const autoName = assetClass === "生活防衛資金";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!autoName && !name.trim()) return;
     if (isForeign && !amount) return;
     if (!isForeign && !valueJpy) return;
 
@@ -91,7 +92,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
     setError(null);
     try {
       await onSave({
-        name: name.trim(),
+        name: autoName ? "生活防衛資金" : name.trim(),
         asset_class: assetClass,
         value_jpy: isForeign ? null : (valueJpy ? Number(valueJpy) : null),
         currency: isForeign ? currency : null,
@@ -120,16 +121,18 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
         <p className="mt-1 text-xs text-zinc-400">{option.description}</p>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-zinc-500">名前</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={option.namePlaceholder}
-          className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-        />
-      </div>
+      {!autoName && (
+        <div>
+          <label className="text-xs font-medium text-zinc-500">名前</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={option.namePlaceholder}
+            className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+          />
+        </div>
+      )}
 
       {isForeign ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -176,7 +179,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={saving || !name.trim() || (isForeign ? !amount : !valueJpy)}
+          disabled={saving || (!autoName && !name.trim()) || (isForeign ? !amount : !valueJpy)}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {saving ? "保存中..." : initial ? "更新" : "追加"}
