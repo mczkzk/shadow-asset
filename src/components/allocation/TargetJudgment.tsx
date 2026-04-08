@@ -45,7 +45,7 @@ const BAR_COLORS = {
 } as const;
 
 // FIRE専用: 超えれば超えるほどOK
-function FireDiffBadge({ diff }: { diff: number }) {
+function FireDiffBadge({ diff, level }: { diff: number; level: DeviationLevel }) {
   if (diff >= 0) {
     return (
       <span className="text-xs font-medium text-emerald-600">
@@ -54,7 +54,7 @@ function FireDiffBadge({ diff }: { diff: number }) {
     );
   }
   return (
-    <span className="text-xs font-medium text-red-500">
+    <span className={`text-xs font-medium ${LEVEL_COLORS[level]}`}>
       {formatJpy(diff)} 不足
     </span>
   );
@@ -69,7 +69,7 @@ function DeviationBadge({ level, diff }: { level: DeviationLevel; diff: number }
       : level === "amber"
         ? direction
         : `大幅${direction}`;
-  const sign = diff >= 0 ? "+" : "";
+  const sign = diff > 0 ? "+" : "";
   return (
     <span className={`text-xs font-medium ${LEVEL_COLORS[level]}`}>
       {sign}{formatJpy(diff)} {label}
@@ -295,6 +295,7 @@ export default function TargetJudgment({
   const expense = monthlyExpense ?? 0;
   const fireTarget = expense * 10000 * 12 * 25;
   const fireDiff = totalExcludingEmergency - fireTarget;
+  const fireLevel: DeviationLevel = fireDiff >= 0 ? "green" : classifyDeviation(totalExcludingEmergency, fireTarget, totalExcludingEmergency);
 
   return (
     <div className="h-full rounded-xl border border-zinc-200 bg-white p-6">
@@ -345,9 +346,9 @@ export default function TargetJudgment({
               <span className="text-sm font-medium text-zinc-700">FIRE目標額</span>
               <span className="ml-2 text-xs text-zinc-400">年間生活費 × 25年 (4%ルール)</span>
             </div>
-            <FireDiffBadge diff={fireDiff} />
+            <FireDiffBadge diff={fireDiff} level={fireLevel} />
           </div>
-          <ProgressBar actual={totalExcludingEmergency} target={fireTarget} barColorClass={BAR_COLORS[fireDiff >= 0 ? "green" : classifyDeviation(totalExcludingEmergency, fireTarget)]} />
+          <ProgressBar actual={totalExcludingEmergency} target={fireTarget} barColorClass={BAR_COLORS[fireLevel]} />
         </div>
 
         <MonthSelectRow
