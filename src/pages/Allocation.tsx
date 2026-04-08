@@ -140,12 +140,6 @@ export default function Allocation() {
               : "手入力資産のみ (ダッシュボードで更新するとポートフォリオが反映されます)"}
           </p>
         </div>
-        <button
-          onClick={refresh}
-          className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50"
-        >
-          更新
-        </button>
       </div>
 
       {filteredItems.length > 0 && (
