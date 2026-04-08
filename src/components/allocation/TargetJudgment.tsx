@@ -15,8 +15,8 @@ const SETTING_KEYS = {
   REAL_ESTATE_TARGET_PCT: "real_estate_target_pct",
 } as const;
 
-const GREEN_THRESHOLD = 10; // ±10% 以内 → 緑
-const AMBER_THRESHOLD = 25; // ±25% 以内 → 黄
+const GREEN_THRESHOLD = 20; // ±20% 以内 → 緑
+const AMBER_THRESHOLD = 50; // ±50% 以内 → 黄
 const NOISE_THRESHOLD = 0.005; // 総資産の0.5%未満の乖離はノイズとして無視
 
 type DeviationLevel = "green" | "amber" | "red";
@@ -49,7 +49,7 @@ function FireDiffBadge({ diff }: { diff: number }) {
   if (diff >= 0) {
     return (
       <span className="text-xs font-medium text-emerald-600">
-        {diff === 0 ? "OK" : `+${formatJpy(diff)} OK`}
+        {diff === 0 ? "達成" : `+${formatJpy(diff)} 達成`}
       </span>
     );
   }
@@ -62,12 +62,13 @@ function FireDiffBadge({ diff }: { diff: number }) {
 
 // アロケーション目標: 目標値からの乖離率で3色表示
 function DeviationBadge({ level, diff }: { level: DeviationLevel; diff: number }) {
+  const direction = diff >= 0 ? "超過" : "不足";
   const label =
     level === "green"
-      ? "OK"
+      ? "適正"
       : level === "amber"
-        ? "要調整"
-        : "大幅乖離";
+        ? direction
+        : `大幅${direction}`;
   const sign = diff >= 0 ? "+" : "";
   return (
     <span className={`text-xs font-medium ${LEVEL_COLORS[level]}`}>
@@ -77,13 +78,13 @@ function DeviationBadge({ level, diff }: { level: DeviationLevel; diff: number }
 }
 
 function ProgressBar({ actual, target, barColorClass }: { actual: number; target: number; barColorClass: string }) {
-  const progress = target > 0 ? Math.min(actual / target, 1) : actual > 0 ? 1 : 0;
+  const pct = target > 0 ? Math.min((actual / target) * 100, 100) : actual > 0 ? 100 : 0;
   return (
     <div className="mt-1 flex items-center gap-3">
       <div className="h-2 flex-1 rounded-full bg-zinc-100">
         <div
           className={`h-2 rounded-full ${barColorClass}`}
-          style={{ width: `${progress * 100}%` }}
+          style={{ width: `${pct}%` }}
         />
       </div>
       <div className="w-48 text-right text-xs text-zinc-500">
@@ -346,7 +347,7 @@ export default function TargetJudgment({
             </div>
             <FireDiffBadge diff={fireDiff} />
           </div>
-          <ProgressBar actual={totalExcludingEmergency} target={fireTarget} barColorClass={fireDiff >= 0 ? "bg-emerald-500" : "bg-amber-400"} />
+          <ProgressBar actual={totalExcludingEmergency} target={fireTarget} barColorClass={BAR_COLORS[fireDiff >= 0 ? "green" : classifyDeviation(totalExcludingEmergency, fireTarget)]} />
         </div>
 
         <MonthSelectRow
