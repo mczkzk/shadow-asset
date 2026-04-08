@@ -7,20 +7,26 @@ const SETTING_KEYS = {
   EMERGENCY_FUND_MONTHS: "emergency_fund_months",
   CASH_POSITION_MONTHS: "cash_position_months",
   GOV_BOND_MONTHS: "gov_bond_months",
+  BOND_TARGET_PCT: "bond_target_pct",
   GOLD_TARGET_PCT: "gold_target_pct",
+  CRYPTO_TARGET_PCT: "crypto_target_pct",
+  FOREX_TARGET_PCT: "forex_deposit_target_pct",
   INSURANCE_TARGET_PCT: "insurance_target_pct",
   REAL_ESTATE_TARGET_PCT: "real_estate_target_pct",
 } as const;
 
 const GREEN_THRESHOLD = 10; // ±10% 以内 → 緑
 const AMBER_THRESHOLD = 25; // ±25% 以内 → 黄
+const NOISE_THRESHOLD = 0.005; // 総資産の0.5%未満の乖離はノイズとして無視
 
 type DeviationLevel = "green" | "amber" | "red";
 
-function classifyDeviation(actual: number, target: number): DeviationLevel {
+function classifyDeviation(actual: number, target: number, total?: number): DeviationLevel {
   if (target === 0) return actual === 0 ? "green" : "red";
   if (target < 0) return "green";
-  const pct = Math.abs((actual - target) / target) * 100;
+  const absDiff = Math.abs(actual - target);
+  if (total && total > 0 && absDiff / total < NOISE_THRESHOLD) return "green";
+  const pct = (absDiff / target) * 100;
   if (pct <= GREEN_THRESHOLD) return "green";
   if (pct <= AMBER_THRESHOLD) return "amber";
   return "red";
@@ -55,8 +61,8 @@ function FireDiffBadge({ diff }: { diff: number }) {
 }
 
 // アロケーション目標: 目標値からの乖離率で3色表示
-function DeviationBadge({ actual, target }: { actual: number; target: number }) {
-  const level = classifyDeviation(actual, target);
+function DeviationBadge({ actual, target, total }: { actual: number; target: number; total?: number }) {
+  const level = classifyDeviation(actual, target, total);
   const diff = actual - target;
   const label =
     level === "green"
@@ -94,13 +100,14 @@ interface MonthSelectRowProps {
   months: number;
   actual: number;
   expense: number;
+  total: number;
   options?: readonly number[];
   onMonthsChange: (months: number) => void;
 }
 
 const MONTH_OPTIONS = [0, 6, 12, 24, 36] as const;
 
-function MonthSelectRow({ label, months, actual, expense, options = MONTH_OPTIONS, onMonthsChange }: MonthSelectRowProps) {
+function MonthSelectRow({ label, months, actual, expense, total, options = MONTH_OPTIONS, onMonthsChange }: MonthSelectRowProps) {
   const target = expense * 10000 * months;
   return (
     <div>
@@ -119,9 +126,9 @@ function MonthSelectRow({ label, months, actual, expense, options = MONTH_OPTION
             ))}
           </select>
         </div>
-        <DeviationBadge actual={actual} target={target} />
+        <DeviationBadge actual={actual} target={target} total={total} />
       </div>
-      <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[classifyDeviation(actual, target)]} />
+      <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[classifyDeviation(actual, target, total)]} />
     </div>
   );
 }
@@ -177,9 +184,9 @@ function PercentInputRow({ label, targetPct, actual, filteredTotal, onTargetPctC
             <span className="text-xs text-zinc-400">%</span>
           </div>
         </div>
-        {active && <DeviationBadge actual={actual} target={target} />}
+        {active && <DeviationBadge actual={actual} target={target} total={filteredTotal} />}
       </div>
-      {active && <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[classifyDeviation(actual, target)]} />}
+      {active && <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[classifyDeviation(actual, target, filteredTotal)]} />}
     </div>
   );
 }
@@ -188,7 +195,10 @@ interface TargetJudgmentProps {
   emergencyFundActual: number;
   cashActual: number;
   govBondActual: number;
+  bondActual: number;
   goldActual: number;
+  cryptoActual: number;
+  forexActual: number;
   insuranceActual: number;
   realEstateActual: number;
   totalExcludingEmergency: number;
@@ -198,7 +208,10 @@ export default function TargetJudgment({
   emergencyFundActual,
   cashActual,
   govBondActual,
+  bondActual,
   goldActual,
+  cryptoActual,
+  forexActual,
   insuranceActual,
   realEstateActual,
   totalExcludingEmergency,
@@ -209,7 +222,10 @@ export default function TargetJudgment({
   const [emergencyMonths, setEmergencyMonths] = useState<number>(6);
   const [cashMonths, setCashMonths] = useState<number>(12);
   const [govBondMonths, setGovBondMonths] = useState<number>(0);
+  const [bondPct, setBondPct] = useState<number | null>(null);
   const [goldPct, setGoldPct] = useState<number | null>(null);
+  const [cryptoPct, setCryptoPct] = useState<number | null>(null);
+  const [forexPct, setForexPct] = useState<number | null>(null);
   const [insurancePct, setInsurancePct] = useState<number | null>(null);
   const [realEstatePct, setRealEstatePct] = useState<number | null>(null);
 
@@ -219,10 +235,13 @@ export default function TargetJudgment({
       getSetting(SETTING_KEYS.EMERGENCY_FUND_MONTHS),
       getSetting(SETTING_KEYS.CASH_POSITION_MONTHS),
       getSetting(SETTING_KEYS.GOV_BOND_MONTHS),
+      getSetting(SETTING_KEYS.BOND_TARGET_PCT),
       getSetting(SETTING_KEYS.GOLD_TARGET_PCT),
+      getSetting(SETTING_KEYS.CRYPTO_TARGET_PCT),
+      getSetting(SETTING_KEYS.FOREX_TARGET_PCT),
       getSetting(SETTING_KEYS.INSURANCE_TARGET_PCT),
       getSetting(SETTING_KEYS.REAL_ESTATE_TARGET_PCT),
-    ]).then(([expense, emergency, cash, bond, gold, insurance, realEstate]) => {
+    ]).then(([expense, emergency, cash, govBond, bond, gold, crypto, forex, insurance, realEstate]) => {
       if (expense.status === "fulfilled" && expense.value != null) {
         const num = Number(expense.value);
         setMonthlyExpense(num);
@@ -230,8 +249,11 @@ export default function TargetJudgment({
       }
       if (emergency.status === "fulfilled" && emergency.value != null) setEmergencyMonths(Number(emergency.value));
       if (cash.status === "fulfilled" && cash.value != null) setCashMonths(Number(cash.value));
-      if (bond.status === "fulfilled" && bond.value != null) setGovBondMonths(Number(bond.value));
+      if (govBond.status === "fulfilled" && govBond.value != null) setGovBondMonths(Number(govBond.value));
+      if (bond.status === "fulfilled" && bond.value != null && bond.value !== "") setBondPct(Number(bond.value));
       if (gold.status === "fulfilled" && gold.value != null && gold.value !== "") setGoldPct(Number(gold.value));
+      if (crypto.status === "fulfilled" && crypto.value != null && crypto.value !== "") setCryptoPct(Number(crypto.value));
+      if (forex.status === "fulfilled" && forex.value != null && forex.value !== "") setForexPct(Number(forex.value));
       if (insurance.status === "fulfilled" && insurance.value != null && insurance.value !== "") setInsurancePct(Number(insurance.value));
       if (realEstate.status === "fulfilled" && realEstate.value != null && realEstate.value !== "") setRealEstatePct(Number(realEstate.value));
     });
@@ -337,6 +359,7 @@ export default function TargetJudgment({
           months={emergencyMonths}
           actual={emergencyFundActual}
           expense={expense}
+          total={totalExcludingEmergency}
           options={[0, 3, 6, 9, 12]}
           onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.EMERGENCY_FUND_MONTHS, setEmergencyMonths, m)}
         />
@@ -346,6 +369,7 @@ export default function TargetJudgment({
           months={cashMonths}
           actual={cashActual}
           expense={expense}
+          total={totalExcludingEmergency}
           onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.CASH_POSITION_MONTHS, setCashMonths, m)}
         />
 
@@ -354,7 +378,16 @@ export default function TargetJudgment({
           months={govBondMonths}
           actual={govBondActual}
           expense={expense}
+          total={totalExcludingEmergency}
           onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.GOV_BOND_MONTHS, setGovBondMonths, m)}
+        />
+
+        <PercentInputRow
+          label="債券"
+          targetPct={bondPct}
+          actual={bondActual}
+          filteredTotal={totalExcludingEmergency}
+          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.BOND_TARGET_PCT, setBondPct, p)}
         />
 
         <PercentInputRow
@@ -366,11 +399,19 @@ export default function TargetJudgment({
         />
 
         <PercentInputRow
-          label="保険"
-          targetPct={insurancePct}
-          actual={insuranceActual}
+          label="暗号資産"
+          targetPct={cryptoPct}
+          actual={cryptoActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.INSURANCE_TARGET_PCT, setInsurancePct, p)}
+          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.CRYPTO_TARGET_PCT, setCryptoPct, p)}
+        />
+
+        <PercentInputRow
+          label="外貨預金"
+          targetPct={forexPct}
+          actual={forexActual}
+          filteredTotal={totalExcludingEmergency}
+          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.FOREX_TARGET_PCT, setForexPct, p)}
         />
 
         <PercentInputRow
@@ -379,6 +420,14 @@ export default function TargetJudgment({
           actual={realEstateActual}
           filteredTotal={totalExcludingEmergency}
           onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.REAL_ESTATE_TARGET_PCT, setRealEstatePct, p)}
+        />
+
+        <PercentInputRow
+          label="保険"
+          targetPct={insurancePct}
+          actual={insuranceActual}
+          filteredTotal={totalExcludingEmergency}
+          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.INSURANCE_TARGET_PCT, setInsurancePct, p)}
         />
       </div>
     </div>

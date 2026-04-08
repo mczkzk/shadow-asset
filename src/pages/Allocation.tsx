@@ -114,7 +114,10 @@ export default function Allocation() {
   const emergencyFundValue = data.items.find((i) => i.name === "生活防衛資金")?.value ?? 0;
   const cashValue = data.items.find((i) => i.name === "現金")?.value ?? 0;
   const govBondValue = data.items.find((i) => i.name === "個人向け国債")?.value ?? 0;
+  const bondValue = data.items.find((i) => i.name === "債券")?.value ?? 0;
   const goldValue = data.items.find((i) => i.name === "ゴールド")?.value ?? 0;
+  const cryptoValue = data.items.find((i) => i.name === "暗号資産")?.value ?? 0;
+  const forexValue = data.items.find((i) => i.name === "外貨預金")?.value ?? 0;
   const insuranceValue = data.items.find((i) => i.name === "保険")?.value ?? 0;
   const realEstateValue = data.items.find((i) => i.name === "不動産")?.value ?? 0;
   const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
@@ -163,7 +166,10 @@ export default function Allocation() {
               emergencyFundActual={emergencyFundValue}
               cashActual={cashValue}
               govBondActual={govBondValue}
+              bondActual={bondValue}
               goldActual={goldValue}
+              cryptoActual={cryptoValue}
+              forexActual={forexValue}
               insuranceActual={insuranceValue}
               realEstateActual={realEstateValue}
               totalExcludingEmergency={filteredTotal}
