@@ -111,9 +111,16 @@ export default function Allocation() {
   const hasSnapshots = data.snapshot_date != null;
 
   // 生活防衛資金をチャート・テーブルから除外
-  const emergencyFundValue = data.items.find((i) => i.name === "生活防衛資金")?.value ?? 0;
-  const cashValue = data.items.find((i) => i.name === "現金")?.value ?? 0;
-  const govBondValue = data.items.find((i) => i.name === "個人向け国債")?.value ?? 0;
+  const valueByName = new Map(data.items.map((i) => [i.name, i.value]));
+  const emergencyFundValue = valueByName.get("生活防衛資金") ?? 0;
+  const cashValue = valueByName.get("現金") ?? 0;
+  const govBondValue = valueByName.get("個人向け国債") ?? 0;
+  const bondValue = valueByName.get("債券") ?? 0;
+  const goldValue = valueByName.get("ゴールド") ?? 0;
+  const cryptoValue = valueByName.get("暗号資産") ?? 0;
+  const forexValue = valueByName.get("外貨預金") ?? 0;
+  const insuranceValue = valueByName.get("保険") ?? 0;
+  const realEstateValue = valueByName.get("不動産") ?? 0;
   const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
   const filteredTotal = data.total_jpy - emergencyFundValue;
   const filteredManualAssets = data.manual_assets.filter(
@@ -143,26 +150,32 @@ export default function Allocation() {
 
       {filteredItems.length > 0 && (
         <>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="[&>div]:h-full">
+          <div className="grid items-start gap-6 md:grid-cols-2">
+            <div>
               <CategoryBreakdownChart
                 breakdown={filteredItems}
                 totalJpy={filteredTotal}
                 title="アセットアロケーション"
               />
+              {emergencyFundValue > 0 && (
+                <p className="mt-2 text-xs text-zinc-400">
+                  ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外
+                </p>
+              )}
             </div>
             <TargetJudgment
               emergencyFundActual={emergencyFundValue}
               cashActual={cashValue}
               govBondActual={govBondValue}
+              bondActual={bondValue}
+              goldActual={goldValue}
+              cryptoActual={cryptoValue}
+              forexActual={forexValue}
+              insuranceActual={insuranceValue}
+              realEstateActual={realEstateValue}
               totalExcludingEmergency={filteredTotal}
             />
           </div>
-          {emergencyFundValue > 0 && (
-            <p className="text-xs text-zinc-400">
-              ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外しています
-            </p>
-          )}
           <AllocationTable items={filteredItems} totalJpy={filteredTotal} manualAssets={filteredManualAssets} />
         </>
       )}
