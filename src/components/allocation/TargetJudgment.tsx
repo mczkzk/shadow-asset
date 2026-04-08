@@ -61,9 +61,7 @@ function FireDiffBadge({ diff }: { diff: number }) {
 }
 
 // アロケーション目標: 目標値からの乖離率で3色表示
-function DeviationBadge({ actual, target, total }: { actual: number; target: number; total?: number }) {
-  const level = classifyDeviation(actual, target, total);
-  const diff = actual - target;
+function DeviationBadge({ level, diff }: { level: DeviationLevel; diff: number }) {
   const label =
     level === "green"
       ? "OK"
@@ -109,6 +107,7 @@ const MONTH_OPTIONS = [0, 6, 12, 24, 36] as const;
 
 function MonthSelectRow({ label, months, actual, expense, total, options = MONTH_OPTIONS, onMonthsChange }: MonthSelectRowProps) {
   const target = expense * 10000 * months;
+  const level = classifyDeviation(actual, target, total);
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -126,9 +125,9 @@ function MonthSelectRow({ label, months, actual, expense, total, options = MONTH
             ))}
           </select>
         </div>
-        <DeviationBadge actual={actual} target={target} total={total} />
+        <DeviationBadge level={level} diff={actual - target} />
       </div>
-      <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[classifyDeviation(actual, target, total)]} />
+      <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[level]} />
     </div>
   );
 }
@@ -150,8 +149,9 @@ function PercentInputRow({ label, targetPct, actual, filteredTotal, onTargetPctC
 
   const active = targetPct != null;
   const target = active ? filteredTotal * targetPct / 100 : 0;
+  const level = classifyDeviation(actual, target, filteredTotal);
 
-  const commit = useCallback(() => {
+  function commit() {
     if (inputValue === "") {
       onTargetPctChange(null);
       return;
@@ -162,7 +162,7 @@ function PercentInputRow({ label, targetPct, actual, filteredTotal, onTargetPctC
       return;
     }
     onTargetPctChange(num);
-  }, [inputValue, targetPct, onTargetPctChange]);
+  }
 
   return (
     <div>
@@ -184,9 +184,9 @@ function PercentInputRow({ label, targetPct, actual, filteredTotal, onTargetPctC
             <span className="text-xs text-zinc-400">%</span>
           </div>
         </div>
-        {active && <DeviationBadge actual={actual} target={target} total={filteredTotal} />}
+        {active && <DeviationBadge level={level} diff={actual - target} />}
       </div>
-      {active && <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[classifyDeviation(actual, target, filteredTotal)]} />}
+      {active && <ProgressBar actual={actual} target={target} barColorClass={BAR_COLORS[level]} />}
     </div>
   );
 }
@@ -267,14 +267,9 @@ export default function TargetJudgment({
     setIsEditing(false);
   }, [inputValue]);
 
-  const handleMonthsChange = useCallback(async (key: string, setter: (v: number) => void, months: number) => {
-    setter(months);
-    await setSetting(key, String(months));
-  }, []);
-
-  const handlePctChange = useCallback(async (key: string, setter: (v: number | null) => void, pct: number | null) => {
-    setter(pct);
-    await setSetting(key, pct != null ? String(pct) : "");
+  const handleSettingChange = useCallback(async <T extends number | null>(key: string, setter: (v: T) => void, value: T) => {
+    setter(value);
+    await setSetting(key, value != null ? String(value) : "");
   }, []);
 
   if (monthlyExpense == null && !isEditing) {
@@ -361,7 +356,7 @@ export default function TargetJudgment({
           expense={expense}
           total={totalExcludingEmergency}
           options={[0, 3, 6, 9, 12]}
-          onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.EMERGENCY_FUND_MONTHS, setEmergencyMonths, m)}
+          onMonthsChange={(m) => handleSettingChange(SETTING_KEYS.EMERGENCY_FUND_MONTHS, setEmergencyMonths, m)}
         />
 
         <MonthSelectRow
@@ -370,7 +365,7 @@ export default function TargetJudgment({
           actual={cashActual}
           expense={expense}
           total={totalExcludingEmergency}
-          onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.CASH_POSITION_MONTHS, setCashMonths, m)}
+          onMonthsChange={(m) => handleSettingChange(SETTING_KEYS.CASH_POSITION_MONTHS, setCashMonths, m)}
         />
 
         <MonthSelectRow
@@ -379,7 +374,7 @@ export default function TargetJudgment({
           actual={govBondActual}
           expense={expense}
           total={totalExcludingEmergency}
-          onMonthsChange={(m) => handleMonthsChange(SETTING_KEYS.GOV_BOND_MONTHS, setGovBondMonths, m)}
+          onMonthsChange={(m) => handleSettingChange(SETTING_KEYS.GOV_BOND_MONTHS, setGovBondMonths, m)}
         />
 
         <PercentInputRow
@@ -387,7 +382,7 @@ export default function TargetJudgment({
           targetPct={bondPct}
           actual={bondActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.BOND_TARGET_PCT, setBondPct, p)}
+          onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.BOND_TARGET_PCT, setBondPct, p)}
         />
 
         <PercentInputRow
@@ -395,7 +390,7 @@ export default function TargetJudgment({
           targetPct={goldPct}
           actual={goldActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.GOLD_TARGET_PCT, setGoldPct, p)}
+          onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.GOLD_TARGET_PCT, setGoldPct, p)}
         />
 
         <PercentInputRow
@@ -403,7 +398,7 @@ export default function TargetJudgment({
           targetPct={cryptoPct}
           actual={cryptoActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.CRYPTO_TARGET_PCT, setCryptoPct, p)}
+          onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.CRYPTO_TARGET_PCT, setCryptoPct, p)}
         />
 
         <PercentInputRow
@@ -411,7 +406,7 @@ export default function TargetJudgment({
           targetPct={forexPct}
           actual={forexActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.FOREX_TARGET_PCT, setForexPct, p)}
+          onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.FOREX_TARGET_PCT, setForexPct, p)}
         />
 
         <PercentInputRow
@@ -419,7 +414,7 @@ export default function TargetJudgment({
           targetPct={realEstatePct}
           actual={realEstateActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.REAL_ESTATE_TARGET_PCT, setRealEstatePct, p)}
+          onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.REAL_ESTATE_TARGET_PCT, setRealEstatePct, p)}
         />
 
         <PercentInputRow
@@ -427,7 +422,7 @@ export default function TargetJudgment({
           targetPct={insurancePct}
           actual={insuranceActual}
           filteredTotal={totalExcludingEmergency}
-          onTargetPctChange={(p) => handlePctChange(SETTING_KEYS.INSURANCE_TARGET_PCT, setInsurancePct, p)}
+          onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.INSURANCE_TARGET_PCT, setInsurancePct, p)}
         />
       </div>
     </div>

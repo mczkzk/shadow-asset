@@ -111,15 +111,16 @@ export default function Allocation() {
   const hasSnapshots = data.snapshot_date != null;
 
   // 生活防衛資金をチャート・テーブルから除外
-  const emergencyFundValue = data.items.find((i) => i.name === "生活防衛資金")?.value ?? 0;
-  const cashValue = data.items.find((i) => i.name === "現金")?.value ?? 0;
-  const govBondValue = data.items.find((i) => i.name === "個人向け国債")?.value ?? 0;
-  const bondValue = data.items.find((i) => i.name === "債券")?.value ?? 0;
-  const goldValue = data.items.find((i) => i.name === "ゴールド")?.value ?? 0;
-  const cryptoValue = data.items.find((i) => i.name === "暗号資産")?.value ?? 0;
-  const forexValue = data.items.find((i) => i.name === "外貨預金")?.value ?? 0;
-  const insuranceValue = data.items.find((i) => i.name === "保険")?.value ?? 0;
-  const realEstateValue = data.items.find((i) => i.name === "不動産")?.value ?? 0;
+  const valueByName = new Map(data.items.map((i) => [i.name, i.value]));
+  const emergencyFundValue = valueByName.get("生活防衛資金") ?? 0;
+  const cashValue = valueByName.get("現金") ?? 0;
+  const govBondValue = valueByName.get("個人向け国債") ?? 0;
+  const bondValue = valueByName.get("債券") ?? 0;
+  const goldValue = valueByName.get("ゴールド") ?? 0;
+  const cryptoValue = valueByName.get("暗号資産") ?? 0;
+  const forexValue = valueByName.get("外貨預金") ?? 0;
+  const insuranceValue = valueByName.get("保険") ?? 0;
+  const realEstateValue = valueByName.get("不動産") ?? 0;
   const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
   const filteredTotal = data.total_jpy - emergencyFundValue;
   const filteredManualAssets = data.manual_assets.filter(
