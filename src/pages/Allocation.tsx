@@ -114,6 +114,9 @@ export default function Allocation() {
   const emergencyFundValue = data.items.find((i) => i.name === "生活防衛資金")?.value ?? 0;
   const cashValue = data.items.find((i) => i.name === "現金")?.value ?? 0;
   const govBondValue = data.items.find((i) => i.name === "個人向け国債")?.value ?? 0;
+  const goldValue = data.items.find((i) => i.name === "ゴールド")?.value ?? 0;
+  const insuranceValue = data.items.find((i) => i.name === "保険")?.value ?? 0;
+  const realEstateValue = data.items.find((i) => i.name === "不動産")?.value ?? 0;
   const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
   const filteredTotal = data.total_jpy - emergencyFundValue;
   const filteredManualAssets = data.manual_assets.filter(
@@ -143,26 +146,29 @@ export default function Allocation() {
 
       {filteredItems.length > 0 && (
         <>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="[&>div]:h-full">
+          <div className="grid items-start gap-6 md:grid-cols-2">
+            <div>
               <CategoryBreakdownChart
                 breakdown={filteredItems}
                 totalJpy={filteredTotal}
                 title="アセットアロケーション"
               />
+              {emergencyFundValue > 0 && (
+                <p className="mt-2 text-xs text-zinc-400">
+                  ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外
+                </p>
+              )}
             </div>
             <TargetJudgment
               emergencyFundActual={emergencyFundValue}
               cashActual={cashValue}
               govBondActual={govBondValue}
+              goldActual={goldValue}
+              insuranceActual={insuranceValue}
+              realEstateActual={realEstateValue}
               totalExcludingEmergency={filteredTotal}
             />
           </div>
-          {emergencyFundValue > 0 && (
-            <p className="text-xs text-zinc-400">
-              ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外しています
-            </p>
-          )}
           <AllocationTable items={filteredItems} totalJpy={filteredTotal} manualAssets={filteredManualAssets} />
         </>
       )}
