@@ -4,71 +4,71 @@
 
 # Shadow Asset
 
-プライバシーファーストの資産シミュレーター。外部金融サービスに接続せず、「公開市場価格 x 自分で入力した数量」だけで資産総額をリアルタイム計算するデスクトップアプリ。
+A privacy-first asset simulator. Without connecting to any external financial services, this desktop app calculates your total assets in real time using only "public market prices x quantities you enter."
 
-## 特徴
+## Features
 
-- **数量のみ保存、金額はリアルタイム計算** (Yahoo Finance, CoinGecko, 田中貴金属等から取得)
-- **完全ローカル** (クラウド不要、アカウント不要)
-- **口座 + 銘柄の2層構造** (NISA, iDeCo, 特定口座, 仮想通貨, ゴールド, DC)
-- **積立シミュレーション** (確認日 + 月額から現在の口数を推定)
-- **リポジトリはpublic化可能** (個人データはローカルSQLiteのみ)
+- **Stores only quantities; values are calculated in real time** (prices fetched from Yahoo Finance, CoinGecko, Tanaka Kikinzoku, etc.)
+- **Fully local** (no cloud, no account required)
+- **Two-layer structure: accounts + holdings** (NISA, iDeCo, taxable brokerage, crypto, gold, DC)
+- **Accumulation simulation** (estimates current units from a start date and monthly contribution)
+- **Repository can be made public** (personal data lives only in local SQLite)
 
-## 技術スタック
+## Tech Stack
 
-- **アプリ**: [Tauri v2](https://tauri.app/) (Rust + WebView)
-- **フロント**: React + TypeScript + Tailwind CSS v4 + Recharts
-- **DB**: SQLite via rusqlite (Rust側で管理)
-- **価格取得**: reqwest (Rust HTTP client)
+- **App**: [Tauri v2](https://tauri.app/) (Rust + WebView)
+- **Frontend**: React + TypeScript + Tailwind CSS v4 + Recharts
+- **DB**: SQLite via rusqlite (managed on the Rust side)
+- **Price fetching**: reqwest (Rust HTTP client)
 
-## 前提条件
+## Prerequisites
 
 - [Rust](https://rustup.rs/) (stable)
 - [Node.js](https://nodejs.org/) v20+
-- macOS (現在の対象プラットフォーム)
+- macOS (current target platform)
 
-## 開発
+## Development
 
 ```bash
-# 依存関係のインストール
+# Install dependencies
 npm install
 
-# 開発モードで起動 (ホットリロード対応)
+# Start in dev mode (with hot reload)
 npm run tauri dev
 ```
 
-初回はRustのコンパイルに数分かかります。2回目以降は差分ビルドで高速です。
+The first run takes a few minutes for Rust compilation. Subsequent runs use incremental builds and are much faster.
 
-フロントエンドのコード変更は即座にTauriウィンドウに反映されます。
-Rust側のコード変更は自動リコンパイル後に反映されます。
+Frontend code changes are reflected instantly in the Tauri window.
+Rust code changes are reflected after automatic recompilation.
 
-## 本番ビルド
+## Production Build
 
 ```bash
 npm run tauri build          # DMG + .app
-npm run install-app          # ビルド + /Applications にインストール + アドホック署名
+npm run install-app          # Build + install to /Applications + ad-hoc signing
 ```
 
-## プロジェクト構造
+## Project Structure
 
 ```
-src/                        # React フロントエンド
-├── components/dashboard/   # ダッシュボードUI
-├── hooks/                  # Tauri invoke ラッパー
-├── lib/                    # 型定義, フォーマッタ, プリセット
-└── pages/                  # ダッシュボード, 保有管理
+src/                        # React frontend
+├── components/dashboard/   # Dashboard UI
+├── hooks/                  # Tauri invoke wrappers
+├── lib/                    # Type definitions, formatters, presets
+└── pages/                  # Dashboard, holdings management
 
-src-tauri/src/              # Rust バックエンド
-├── commands/               # Tauri コマンド (CRUD, 価格取得)
-├── pricing/                # 外部API (Yahoo Finance, CoinGecko等)
-├── db.rs                   # SQLite初期化
-└── lib.rs                  # エントリポイント
+src-tauri/src/              # Rust backend
+├── commands/               # Tauri commands (CRUD, price fetching)
+├── pricing/                # External APIs (Yahoo Finance, CoinGecko, etc.)
+├── db.rs                   # SQLite initialization
+└── lib.rs                  # Entry point
 ```
 
-## データ保存先
+## Data Storage
 
 ```
 ~/Library/Application Support/com.mczkzk.shadow-asset/shadow-asset.db
 ```
 
-SQLiteファイルに口座名・ティッカー・数量のみ保存。gitには含まれません。
+Only account names, tickers, and quantities are stored in the SQLite file. It is not tracked by git.
