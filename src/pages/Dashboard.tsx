@@ -8,11 +8,19 @@ import ManualAssetSummary from "@/components/dashboard/ManualAssetSummary";
 import AssetHistory from "@/components/dashboard/AssetHistory";
 
 const CRASH_THRESHOLD_PCT = -5;
+const SHOW_CHANGE_STORAGE_KEY = "dashboard.showChange";
 
 export default function Dashboard() {
   const { data, isLoading, error, refresh, refreshCount } = usePortfolio();
-  const [showChange, setShowChange] = useState(true);
+  const [showChange, setShowChange] = useState(() => {
+    const stored = localStorage.getItem(SHOW_CHANGE_STORAGE_KEY);
+    return stored === null ? true : stored === "true";
+  });
   const [crashChecked, setCrashChecked] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(SHOW_CHANGE_STORAGE_KEY, String(showChange));
+  }, [showChange]);
 
   useEffect(() => {
     if (crashChecked || data?.prev_total_jpy == null) return;
