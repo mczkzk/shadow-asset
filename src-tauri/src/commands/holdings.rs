@@ -24,7 +24,6 @@ pub struct CreateHoldingRequest {
     pub name: String,
     pub quantity: f64,
     pub holding_type: String,
-    pub as_of: Option<String>,
     pub monthly_amount: Option<f64>,
 }
 
@@ -35,8 +34,11 @@ pub struct UpdateHoldingRequest {
     pub name: String,
     pub quantity: f64,
     pub holding_type: String,
-    pub as_of: Option<String>,
     pub monthly_amount: Option<f64>,
+}
+
+fn today() -> String {
+    chrono::Local::now().format("%Y-%m-%d").to_string()
 }
 
 #[tauri::command]
@@ -80,6 +82,9 @@ pub fn create_holding(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
+    // Stamp as_of when a real quantity is set so monthly contribution estimation has a baseline.
+    let as_of = if request.quantity > 0.0 { Some(today()) } else { None };
+
     conn.execute(
         "INSERT INTO holdings (account_id, ticker, name, quantity, holding_type, as_of, monthly_amount)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -89,7 +94,7 @@ pub fn create_holding(
             request.name,
             request.quantity,
             request.holding_type,
-            request.as_of,
+            as_of,
             request.monthly_amount,
         ],
     )
@@ -103,7 +108,7 @@ pub fn create_holding(
         name: request.name,
         quantity: request.quantity,
         holding_type: request.holding_type,
-        as_of: request.as_of,
+        as_of,
         monthly_amount: request.monthly_amount,
         asset_class: None,
     })
@@ -117,6 +122,8 @@ pub fn update_holding(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
+    // 保存 implies the user is confirming the displayed quantity as of now,
+    // so always re-stamp as_of to today.
     conn.execute(
         "UPDATE holdings SET ticker = ?1, name = ?2, quantity = ?3, holding_type = ?4, as_of = ?5, monthly_amount = ?6
          WHERE id = ?7",
@@ -125,7 +132,7 @@ pub fn update_holding(
             request.name,
             request.quantity,
             request.holding_type,
-            request.as_of,
+            today(),
             request.monthly_amount,
             request.id,
         ],

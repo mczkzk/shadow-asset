@@ -37,7 +37,6 @@ export function createHolding(request: {
   name: string;
   quantity: number;
   holding_type: string;
-  as_of: string | null;
   monthly_amount: number | null;
 }): Promise<Holding> {
   return invoke("create_holding", { request });
@@ -49,7 +48,6 @@ export function updateHolding(request: {
   name: string;
   quantity: number;
   holding_type: string;
-  as_of: string | null;
   monthly_amount: number | null;
 }): Promise<void> {
   return invoke("update_holding", { request });

@@ -156,7 +156,6 @@ function GoldHoldingForm({
         name: preset.label,
         quantity: parseFloat(quantity), // number of coins/bars
         holding_type: preset.holdingType,
-        as_of: null,
         monthly_amount: null,
       });
       setQuantity("");
@@ -221,7 +220,6 @@ function HoldingForm({
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [holdingType, setHoldingType] = useState<HoldingType>(allowedTypes[0]);
-  const [asOf, setAsOf] = useState("");
   const [monthlyAmount, setMonthlyAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -265,14 +263,12 @@ function HoldingForm({
         name: name.trim(),
         quantity: parseFloat(quantity),
         holding_type: holdingType,
-        as_of: asOf || null,
         monthly_amount: monthlyAmount ? parseFloat(monthlyAmount) : null,
       });
 
       setTicker("");
       setName("");
       setQuantity("");
-      setAsOf("");
       setMonthlyAmount("");
       setShowSuggestions(false);
       onCreated();
@@ -358,31 +354,18 @@ function HoldingForm({
           </div>
         )}
         {showTsumitate && (
-          <>
-            <div>
-              <label className="block text-xs text-zinc-500">
-                確認日 (積立用)
-              </label>
-              <input
-                type="date"
-                value={asOf}
-                onChange={(e) => setAsOf(e.target.value)}
-                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">
-                月額積立 (円)
-              </label>
-              <input
-                type="number"
-                value={monthlyAmount}
-                onChange={(e) => setMonthlyAmount(e.target.value)}
-                placeholder="例: 50000"
-                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-              />
-            </div>
-          </>
+          <div>
+            <label className="block text-xs text-zinc-500">
+              月額積立 (円)
+            </label>
+            <input
+              type="number"
+              value={monthlyAmount}
+              onChange={(e) => setMonthlyAmount(e.target.value)}
+              placeholder="例: 50000"
+              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+            />
+          </div>
         )}
       </div>
       <button
@@ -432,7 +415,6 @@ function EditableHolding({
 }) {
   const [editing, setEditing] = useState(false);
   const [qty, setQty] = useState(String(holding.quantity));
-  const [asOf, setAsOf] = useState(holding.as_of ?? "");
   const [monthly, setMonthly] = useState(
     holding.monthly_amount != null ? String(holding.monthly_amount) : ""
   );
@@ -447,7 +429,6 @@ function EditableHolding({
         name: holding.name,
         quantity: parseFloat(qty),
         holding_type: holding.holding_type,
-        as_of: asOf || null,
         monthly_amount: monthly ? parseFloat(monthly) : null,
       });
       setEditing(false);
@@ -476,15 +457,6 @@ function EditableHolding({
             />
           </div>
           <div>
-            <label className="block text-xs text-zinc-500">確認日</label>
-            <input
-              type="date"
-              value={asOf}
-              onChange={(e) => setAsOf(e.target.value)}
-              className="rounded border border-zinc-300 px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
             <label className="block text-xs text-zinc-500">月額積立 (円)</label>
             <input
               type="number"
@@ -494,6 +466,11 @@ function EditableHolding({
               className="w-28 rounded border border-zinc-300 px-2 py-1 text-sm"
             />
           </div>
+          {holding.as_of && (
+            <div className="text-xs text-zinc-400">
+              数量確認日: {holding.as_of}
+            </div>
+          )}
           <button
             onClick={handleSave}
             className="rounded bg-indigo-600 px-3 py-1 text-xs text-white hover:bg-indigo-700"
