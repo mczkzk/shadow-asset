@@ -2,6 +2,7 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::util::today;
 use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -35,10 +36,6 @@ pub struct UpdateHoldingRequest {
     pub quantity: f64,
     pub holding_type: String,
     pub monthly_amount: Option<f64>,
-}
-
-fn today() -> String {
-    chrono::Local::now().format("%Y-%m-%d").to_string()
 }
 
 #[tauri::command]
@@ -122,7 +119,7 @@ pub fn update_holding(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
-    // 保存 implies the user is confirming the displayed quantity as of now,
+    // Saving implies the user is confirming the displayed quantity as of now,
     // so always re-stamp as_of to today.
     conn.execute(
         "UPDATE holdings SET ticker = ?1, name = ?2, quantity = ?3, holding_type = ?4, as_of = ?5, monthly_amount = ?6

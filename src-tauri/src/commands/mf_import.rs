@@ -106,7 +106,7 @@ pub fn preview_mf_import(state: State<AppState>, path: String) -> Result<MfImpor
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let today = crate::util::today();
     let skipped_today = all_rows.iter().any(|r| r.date == today);
 
     // Dates with holding_snapshots are app-generated (not MF) and must not be overwritten

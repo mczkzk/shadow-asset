@@ -446,7 +446,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
     let (prev_total_jpy, prev_date) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let conn = db.as_ref().ok_or("database not initialized")?;
-        let today = Local::now().format("%Y-%m-%d").to_string();
+        let today = crate::util::today();
 
         // Load previous holding-level values (single query)
         let mut stmt = conn

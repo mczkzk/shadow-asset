@@ -353,9 +353,8 @@ pub fn apply_csv_import(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
-    // CSV import is the user confirming today's broker-side quantity, so re-stamp as_of
-    // to today. Otherwise stale as_of would double-count monthly contributions in estimation.
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    // CSV import is the user confirming today's broker-side quantity, so re-stamp as_of.
+    let today = crate::util::today();
 
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
     for u in &updates {

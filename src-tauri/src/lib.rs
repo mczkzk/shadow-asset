@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod pricing;
+mod util;
 
 use rusqlite::Connection;
 use std::sync::Mutex;
