@@ -111,7 +111,7 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
         "債券" => "#8B5CF6",
         "不動産" => "#F59E0B",
         "保険" => "#EC4899",
-        "公的年金" => "#A855F7",
+        "公的年金" => "#3B82F6",
         // Allocation page uses finer-grained categories
         "暗号資産" => "#D97706",
         "現金" => "#10B981",
