@@ -71,6 +71,7 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
 
 const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "AUD", "CHF", "CAD", "NZD"];
 const GOV_BOND_NAME_OPTIONS = ["変動10年", "固定5年", "固定3年"];
+const AUTO_NAME_CLASSES = new Set<string>(["生活防衛資金", "公的年金"]);
 
 interface ManualAssetFormProps {
   initial?: ManualAsset;
@@ -90,12 +91,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
   const option = ASSET_CLASS_OPTIONS.find((o) => o.value === assetClass) ?? ASSET_CLASS_OPTIONS[0];
   const isForeign = assetClass === "外貨預金";
   const isGovBond = assetClass === "個人向け国債";
-  const autoNameClasses: Record<string, string> = {
-    "生活防衛資金": "生活防衛資金",
-    "公的年金": "公的年金",
-  };
-  const autoNameValue = autoNameClasses[assetClass];
-  const autoName = autoNameValue != null;
+  const autoName = AUTO_NAME_CLASSES.has(assetClass);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +103,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
     setError(null);
     try {
       await onSave({
-        name: autoName ? autoNameValue! : name.trim(),
+        name: autoName ? assetClass : name.trim(),
         asset_class: assetClass,
         value_jpy: isForeign ? null : (valueJpy ? Number(valueJpy) : null),
         currency: isForeign ? currency : null,
@@ -129,7 +125,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
           onChange={(e) => {
             const cls = e.target.value;
             setAssetClass(cls);
-            setName(autoNameClasses[cls] ?? (cls === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : ""));
+            setName(AUTO_NAME_CLASSES.has(cls) ? cls : cls === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : "");
           }}
           className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
         >

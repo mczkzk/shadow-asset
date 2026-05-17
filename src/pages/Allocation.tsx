@@ -5,6 +5,8 @@ import { formatJpy, formatNumber, formatPercent } from "@/lib/format";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
 import TargetJudgment from "@/components/allocation/TargetJudgment";
 
+const EXCLUDED_FROM_ALLOCATION = new Set<string>(["生活防衛資金", "公的年金"]);
+
 function AllocationTable({
   items,
   totalJpy,
@@ -111,7 +113,6 @@ export default function Allocation() {
   const hasSnapshots = data.snapshot_date != null;
 
   // 配分対象外: 生活防衛資金 (流動性は高いがリスク配分外) + 公的年金 (流動性ゼロ)
-  const EXCLUDED_FROM_ALLOCATION = ["生活防衛資金", "公的年金"] as const;
   const valueByName = new Map(data.items.map((i) => [i.name, i.value]));
   const emergencyFundValue = valueByName.get("生活防衛資金") ?? 0;
   const pensionValue = valueByName.get("公的年金") ?? 0;
@@ -123,13 +124,9 @@ export default function Allocation() {
   const forexValue = valueByName.get("外貨預金") ?? 0;
   const insuranceValue = valueByName.get("保険") ?? 0;
   const realEstateValue = valueByName.get("不動産") ?? 0;
-  const filteredItems = data.items.filter(
-    (i) => !EXCLUDED_FROM_ALLOCATION.includes(i.name as typeof EXCLUDED_FROM_ALLOCATION[number]),
-  );
+  const filteredItems = data.items.filter((i) => !EXCLUDED_FROM_ALLOCATION.has(i.name));
   const filteredTotal = data.total_jpy - emergencyFundValue - pensionValue;
-  const filteredManualAssets = data.manual_assets.filter(
-    (a) => !EXCLUDED_FROM_ALLOCATION.includes(a.asset_class as typeof EXCLUDED_FROM_ALLOCATION[number]),
-  );
+  const filteredManualAssets = data.manual_assets.filter((a) => !EXCLUDED_FROM_ALLOCATION.has(a.asset_class));
 
   return (
     <div className="space-y-6">
