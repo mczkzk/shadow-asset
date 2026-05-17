@@ -110,9 +110,11 @@ export default function Allocation() {
 
   const hasSnapshots = data.snapshot_date != null;
 
-  // 生活防衛資金をチャート・テーブルから除外
+  // 配分対象外: 生活防衛資金 (流動性は高いがリスク配分外) + 公的年金 (流動性ゼロ)
+  const EXCLUDED_FROM_ALLOCATION = ["生活防衛資金", "公的年金"] as const;
   const valueByName = new Map(data.items.map((i) => [i.name, i.value]));
   const emergencyFundValue = valueByName.get("生活防衛資金") ?? 0;
+  const pensionValue = valueByName.get("公的年金") ?? 0;
   const cashValue = valueByName.get("現金") ?? 0;
   const govBondValue = valueByName.get("個人向け国債") ?? 0;
   const bondValue = valueByName.get("債券") ?? 0;
@@ -121,10 +123,12 @@ export default function Allocation() {
   const forexValue = valueByName.get("外貨預金") ?? 0;
   const insuranceValue = valueByName.get("保険") ?? 0;
   const realEstateValue = valueByName.get("不動産") ?? 0;
-  const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
-  const filteredTotal = data.total_jpy - emergencyFundValue;
+  const filteredItems = data.items.filter(
+    (i) => !EXCLUDED_FROM_ALLOCATION.includes(i.name as typeof EXCLUDED_FROM_ALLOCATION[number]),
+  );
+  const filteredTotal = data.total_jpy - emergencyFundValue - pensionValue;
   const filteredManualAssets = data.manual_assets.filter(
-    (a) => a.asset_class !== "生活防衛資金",
+    (a) => !EXCLUDED_FROM_ALLOCATION.includes(a.asset_class as typeof EXCLUDED_FROM_ALLOCATION[number]),
   );
 
   return (
@@ -156,6 +160,11 @@ export default function Allocation() {
                   ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外
                 </p>
               )}
+              {pensionValue > 0 && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  ※ 公的年金 {formatJpy(pensionValue)} は配分対象外のため除外
+                </p>
+              )}
             </div>
             <TargetJudgment
               emergencyFundActual={emergencyFundValue}
@@ -167,7 +176,7 @@ export default function Allocation() {
               forexActual={forexValue}
               insuranceActual={insuranceValue}
               realEstateActual={realEstateValue}
-              totalExcludingEmergency={filteredTotal}
+              totalForJudgment={filteredTotal}
             />
           </div>
           <AllocationTable items={filteredItems} totalJpy={filteredTotal} manualAssets={filteredManualAssets} />

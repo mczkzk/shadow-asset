@@ -202,7 +202,7 @@ interface TargetJudgmentProps {
   forexActual: number;
   insuranceActual: number;
   realEstateActual: number;
-  totalExcludingEmergency: number;
+  totalForJudgment: number;
 }
 
 export default function TargetJudgment({
@@ -215,7 +215,7 @@ export default function TargetJudgment({
   forexActual,
   insuranceActual,
   realEstateActual,
-  totalExcludingEmergency,
+  totalForJudgment,
 }: TargetJudgmentProps) {
   const [monthlyExpense, setMonthlyExpense] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -294,8 +294,8 @@ export default function TargetJudgment({
 
   const expense = monthlyExpense ?? 0;
   const fireTarget = expense * 10000 * 12 * 25;
-  const fireDiff = totalExcludingEmergency - fireTarget;
-  const fireLevel: DeviationLevel = fireDiff >= 0 ? "green" : classifyDeviation(totalExcludingEmergency, fireTarget, totalExcludingEmergency);
+  const fireDiff = totalForJudgment - fireTarget;
+  const fireLevel: DeviationLevel = fireDiff >= 0 ? "green" : classifyDeviation(totalForJudgment, fireTarget, totalForJudgment);
 
   return (
     <div className="h-full rounded-xl border border-zinc-200 bg-white p-6">
@@ -348,7 +348,7 @@ export default function TargetJudgment({
             </div>
             <FireDiffBadge diff={fireDiff} level={fireLevel} />
           </div>
-          <ProgressBar actual={totalExcludingEmergency} target={fireTarget} barColorClass={BAR_COLORS[fireLevel]} />
+          <ProgressBar actual={totalForJudgment} target={fireTarget} barColorClass={BAR_COLORS[fireLevel]} />
         </div>
 
         <MonthSelectRow
@@ -356,7 +356,7 @@ export default function TargetJudgment({
           months={emergencyMonths}
           actual={emergencyFundActual}
           expense={expense}
-          total={totalExcludingEmergency}
+          total={totalForJudgment}
           options={[0, 3, 6, 9, 12]}
           onMonthsChange={(m) => handleSettingChange(SETTING_KEYS.EMERGENCY_FUND_MONTHS, setEmergencyMonths, m)}
         />
@@ -366,7 +366,7 @@ export default function TargetJudgment({
           months={cashMonths}
           actual={cashActual}
           expense={expense}
-          total={totalExcludingEmergency}
+          total={totalForJudgment}
           onMonthsChange={(m) => handleSettingChange(SETTING_KEYS.CASH_POSITION_MONTHS, setCashMonths, m)}
         />
 
@@ -375,7 +375,7 @@ export default function TargetJudgment({
           months={govBondMonths}
           actual={govBondActual}
           expense={expense}
-          total={totalExcludingEmergency}
+          total={totalForJudgment}
           onMonthsChange={(m) => handleSettingChange(SETTING_KEYS.GOV_BOND_MONTHS, setGovBondMonths, m)}
         />
 
@@ -383,7 +383,7 @@ export default function TargetJudgment({
           label="債券"
           targetPct={bondPct}
           actual={bondActual}
-          filteredTotal={totalExcludingEmergency}
+          filteredTotal={totalForJudgment}
           onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.BOND_TARGET_PCT, setBondPct, p)}
         />
 
@@ -391,7 +391,7 @@ export default function TargetJudgment({
           label="ゴールド"
           targetPct={goldPct}
           actual={goldActual}
-          filteredTotal={totalExcludingEmergency}
+          filteredTotal={totalForJudgment}
           onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.GOLD_TARGET_PCT, setGoldPct, p)}
         />
 
@@ -399,7 +399,7 @@ export default function TargetJudgment({
           label="暗号資産"
           targetPct={cryptoPct}
           actual={cryptoActual}
-          filteredTotal={totalExcludingEmergency}
+          filteredTotal={totalForJudgment}
           onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.CRYPTO_TARGET_PCT, setCryptoPct, p)}
         />
 
@@ -407,7 +407,7 @@ export default function TargetJudgment({
           label="外貨預金"
           targetPct={forexPct}
           actual={forexActual}
-          filteredTotal={totalExcludingEmergency}
+          filteredTotal={totalForJudgment}
           onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.FOREX_TARGET_PCT, setForexPct, p)}
         />
 
@@ -415,7 +415,7 @@ export default function TargetJudgment({
           label="不動産"
           targetPct={realEstatePct}
           actual={realEstateActual}
-          filteredTotal={totalExcludingEmergency}
+          filteredTotal={totalForJudgment}
           onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.REAL_ESTATE_TARGET_PCT, setRealEstatePct, p)}
         />
 
@@ -423,7 +423,7 @@ export default function TargetJudgment({
           label="保険"
           targetPct={insurancePct}
           actual={insuranceActual}
-          filteredTotal={totalExcludingEmergency}
+          filteredTotal={totalForJudgment}
           onTargetPctChange={(p) => handleSettingChange(SETTING_KEYS.INSURANCE_TARGET_PCT, setInsurancePct, p)}
         />
       </div>
