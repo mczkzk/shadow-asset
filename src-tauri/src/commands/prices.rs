@@ -111,6 +111,7 @@ pub(crate) fn asset_class_color(class_name: &str) -> &'static str {
         "債券" => "#8B5CF6",
         "不動産" => "#F59E0B",
         "保険" => "#EC4899",
+        "公的年金" => "#3B82F6",
         // Allocation page uses finer-grained categories
         "暗号資産" => "#D97706",
         "現金" => "#10B981",
@@ -422,7 +423,7 @@ pub async fn fetch_portfolio(state: State<'_, AppState>) -> Result<PortfolioResp
 
     let class_order = [
         "投資信託", "株式", "債券", "ゴールド(現物)", "預金・現金・暗号資産",
-        "不動産", "保険",
+        "不動産", "保険", "公的年金",
     ];
 
     let mut breakdown: Vec<CategoryBreakdown> = class_totals

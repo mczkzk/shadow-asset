@@ -5,6 +5,8 @@ import { formatJpy, formatNumber, formatPercent } from "@/lib/format";
 import CategoryBreakdownChart from "@/components/dashboard/CategoryBreakdownChart";
 import TargetJudgment from "@/components/allocation/TargetJudgment";
 
+const EXCLUDED_FROM_ALLOCATION = new Set<string>(["生活防衛資金", "公的年金"]);
+
 function AllocationTable({
   items,
   totalJpy,
@@ -110,9 +112,10 @@ export default function Allocation() {
 
   const hasSnapshots = data.snapshot_date != null;
 
-  // 生活防衛資金をチャート・テーブルから除外
+  // 配分対象外: 生活防衛資金 (流動性は高いがリスク配分外) + 公的年金 (流動性ゼロ)
   const valueByName = new Map(data.items.map((i) => [i.name, i.value]));
   const emergencyFundValue = valueByName.get("生活防衛資金") ?? 0;
+  const pensionValue = valueByName.get("公的年金") ?? 0;
   const cashValue = valueByName.get("現金") ?? 0;
   const govBondValue = valueByName.get("個人向け国債") ?? 0;
   const bondValue = valueByName.get("債券") ?? 0;
@@ -121,11 +124,9 @@ export default function Allocation() {
   const forexValue = valueByName.get("外貨預金") ?? 0;
   const insuranceValue = valueByName.get("保険") ?? 0;
   const realEstateValue = valueByName.get("不動産") ?? 0;
-  const filteredItems = data.items.filter((i) => i.name !== "生活防衛資金");
-  const filteredTotal = data.total_jpy - emergencyFundValue;
-  const filteredManualAssets = data.manual_assets.filter(
-    (a) => a.asset_class !== "生活防衛資金",
-  );
+  const filteredItems = data.items.filter((i) => !EXCLUDED_FROM_ALLOCATION.has(i.name));
+  const filteredTotal = data.total_jpy - emergencyFundValue - pensionValue;
+  const filteredManualAssets = data.manual_assets.filter((a) => !EXCLUDED_FROM_ALLOCATION.has(a.asset_class));
 
   return (
     <div className="space-y-6">
@@ -156,6 +157,11 @@ export default function Allocation() {
                   ※ 生活防衛資金 {formatJpy(emergencyFundValue)} は配分対象外のため除外
                 </p>
               )}
+              {pensionValue > 0 && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  ※ 公的年金 {formatJpy(pensionValue)} は配分対象外のため除外
+                </p>
+              )}
             </div>
             <TargetJudgment
               emergencyFundActual={emergencyFundValue}
@@ -167,7 +173,7 @@ export default function Allocation() {
               forexActual={forexValue}
               insuranceActual={insuranceValue}
               realEstateActual={realEstateValue}
-              totalExcludingEmergency={filteredTotal}
+              totalForJudgment={filteredTotal}
             />
           </div>
           <AllocationTable items={filteredItems} totalJpy={filteredTotal} manualAssets={filteredManualAssets} />

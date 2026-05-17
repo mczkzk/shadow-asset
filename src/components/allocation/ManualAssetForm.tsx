@@ -52,6 +52,14 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
     amountPlaceholder: "例: 1000000",
   },
   {
+    value: "公的年金",
+    label: "公的年金",
+    description: "年金ネットで確認できる「これまでの保険料納付総額(総合計)」。流動性ゼロのため配分対象外",
+    namePlaceholder: "例: 公的年金",
+    amountLabel: "保険料納付総額(円)",
+    amountPlaceholder: "例: 5000000",
+  },
+  {
     value: "生活防衛資金",
     label: "生活防衛資金",
     description: "生活費の3〜6ヶ月分など、投資に回さない別枠の現金",
@@ -63,6 +71,7 @@ const ASSET_CLASS_OPTIONS: AssetClassOption[] = [
 
 const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "AUD", "CHF", "CAD", "NZD"];
 const GOV_BOND_NAME_OPTIONS = ["変動10年", "固定5年", "固定3年"];
+const AUTO_NAME_CLASSES = new Set<string>(["生活防衛資金", "公的年金"]);
 
 interface ManualAssetFormProps {
   initial?: ManualAsset;
@@ -82,7 +91,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
   const option = ASSET_CLASS_OPTIONS.find((o) => o.value === assetClass) ?? ASSET_CLASS_OPTIONS[0];
   const isForeign = assetClass === "外貨預金";
   const isGovBond = assetClass === "個人向け国債";
-  const autoName = assetClass === "生活防衛資金";
+  const autoName = AUTO_NAME_CLASSES.has(assetClass);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +103,7 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
     setError(null);
     try {
       await onSave({
-        name: autoName ? "生活防衛資金" : name.trim(),
+        name: autoName ? assetClass : name.trim(),
         asset_class: assetClass,
         value_jpy: isForeign ? null : (valueJpy ? Number(valueJpy) : null),
         currency: isForeign ? currency : null,
@@ -114,8 +123,9 @@ export default function ManualAssetForm({ initial, onSave, onCancel }: ManualAss
         <select
           value={assetClass}
           onChange={(e) => {
-            setAssetClass(e.target.value);
-            setName(e.target.value === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : "");
+            const cls = e.target.value;
+            setAssetClass(cls);
+            setName(AUTO_NAME_CLASSES.has(cls) ? cls : cls === "個人向け国債" ? GOV_BOND_NAME_OPTIONS[0] : "");
           }}
           className="mt-1 block w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
         >

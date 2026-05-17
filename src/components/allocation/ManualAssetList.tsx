@@ -64,7 +64,7 @@ export default function ManualAssetList({ assets, forexRates, onChanged }: Manua
 
       {assets.length === 0 && !showForm && (
         <p className="rounded-xl border border-zinc-200 bg-white px-5 py-4 text-sm text-zinc-400">
-          現金、外貨預金、不動産、保険、生活防衛資金などを追加できます
+          現金、外貨預金、不動産、保険、公的年金、生活防衛資金などを追加できます
         </p>
       )}
 
