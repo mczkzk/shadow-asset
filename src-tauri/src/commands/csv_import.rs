@@ -353,11 +353,14 @@ pub fn apply_csv_import(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.as_ref().ok_or("database not initialized")?;
 
+    // Importing CSV means "I confirmed these quantities today", so refresh as_of.
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
     for u in &updates {
         tx.execute(
-            "UPDATE holdings SET quantity = ?1 WHERE id = ?2",
-            params![u.new_quantity, u.holding_id],
+            "UPDATE holdings SET quantity = ?1, as_of = ?2 WHERE id = ?3",
+            params![u.new_quantity, today, u.holding_id],
         )
         .map_err(|e| e.to_string())?;
     }
