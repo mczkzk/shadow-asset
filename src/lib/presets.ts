@@ -60,6 +60,7 @@ export const HOLDING_PRESETS: HoldingPreset[] = [
   { ticker: "AMZN", name: "アマゾン", holdingType: "us_stock" },
   { ticker: "TSLA", name: "テスラ", holdingType: "us_stock" },
   { ticker: "META", name: "メタ・プラットフォームズ", holdingType: "us_stock" },
+  { ticker: "SPCX", name: "スペースX", holdingType: "us_stock" },
   // 米国ETF
   { ticker: "VOO", name: "Vanguard S&P 500 ETF", holdingType: "us_etf" },
   { ticker: "VTI", name: "Vanguard Total Stock Market ETF", holdingType: "us_etf" },
