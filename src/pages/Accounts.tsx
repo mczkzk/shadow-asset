@@ -421,6 +421,26 @@ function quantityUnit(h: Holding): string {
   }
 }
 
+// Display order matching the dashboard: 投信 → 個別株/ETF → DC → 仮想通貨 → ゴールド
+function holdingSortRank(holdingType: HoldingType): number {
+  switch (holdingType) {
+    case "fund":
+      return 0;
+    case "dc_fund":
+      return 2;
+    case "crypto":
+      return 3;
+    default:
+      return holdingType.startsWith("gold_") ? 4 : 1;
+  }
+}
+
+function sortHoldings(holdings: Holding[]): Holding[] {
+  return [...holdings].sort(
+    (a, b) => holdingSortRank(a.holding_type) - holdingSortRank(b.holding_type)
+  );
+}
+
 function EditableHolding({
   holding,
   onUpdated,
@@ -741,8 +761,8 @@ export default function Accounts() {
 
       <div className="space-y-3">
         {accounts.map((account) => {
-          const accountHoldings = holdings.filter(
-            (h) => h.account_id === account.id
+          const accountHoldings = sortHoldings(
+            holdings.filter((h) => h.account_id === account.id)
           );
           const isExpanded = expandedAccount === account.id;
 
