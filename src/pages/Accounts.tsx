@@ -441,6 +441,13 @@ function sortHoldings(holdings: Holding[]): Holding[] {
   );
 }
 
+// Local date in the YYYY-MM-DD form that <input type="date"> and the DB both use.
+// toISOString() is UTC, so it would return yesterday during the JST morning.
+function today(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function EditableHolding({
   holding,
   onUpdated,
@@ -456,7 +463,33 @@ function EditableHolding({
   const [monthly, setMonthly] = useState(
     holding.monthly_amount != null ? String(holding.monthly_amount) : ""
   );
+  const [asOfTouched, setAsOfTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Start from the stored values every time, so a canceled edit leaves nothing behind
+  const startEditing = () => {
+    setQty(String(holding.quantity));
+    setAsOf(holding.as_of ?? "");
+    setMonthly(
+      holding.monthly_amount != null ? String(holding.monthly_amount) : ""
+    );
+    setAsOfTouched(false);
+    setError(null);
+    setEditing(true);
+  };
+
+  // Typing a new quantity means "I checked this number today", so the date follows it
+  // (same rule as CSV import). Once the user picks a date themselves, leave it alone.
+  const handleQtyChange = (value: string) => {
+    setQty(value);
+    if (asOfTouched) return;
+    setAsOf(value === String(holding.quantity) ? holding.as_of ?? "" : today());
+  };
+
+  const handleAsOfChange = (value: string) => {
+    setAsOf(value);
+    setAsOfTouched(true);
+  };
 
   const handleSave = async () => {
     setError(null);
@@ -491,7 +524,7 @@ function EditableHolding({
               type="number"
               step="any"
               value={qty}
-              onChange={(e) => setQty(e.target.value)}
+              onChange={(e) => handleQtyChange(e.target.value)}
               className="w-28 rounded border border-zinc-300 px-2 py-1 text-sm"
             />
           </div>
@@ -500,7 +533,7 @@ function EditableHolding({
             <input
               type="date"
               value={asOf}
-              onChange={(e) => setAsOf(e.target.value)}
+              onChange={(e) => handleAsOfChange(e.target.value)}
               className="rounded border border-zinc-300 px-2 py-1 text-sm"
             />
           </div>
@@ -535,7 +568,7 @@ function EditableHolding({
   return (
     <div className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-zinc-50">
       <button
-        onClick={() => setEditing(true)}
+        onClick={startEditing}
         className="text-left"
       >
         <span className="font-medium text-zinc-700">{holding.name}</span>
